@@ -63,35 +63,14 @@ defmodule ExLeiden.MixProject do
 
   defp docs do
     [
-      main: "ExLeiden",
+      main: "readme",
       source_ref: "v#{@version}",
       source_url: @source_url,
       extras: [
         "README.md",
         "CHANGELOG.md"
       ],
-      groups_for_modules: [
-        "Core Algorithm": [
-          ExLeiden,
-          ExLeiden.Algorithm
-        ],
-        "Quality Functions": [
-          ExLeiden.Quality,
-          ExLeiden.Quality.Modularity,
-          ExLeiden.Quality.CPM
-        ],
-        "Graph Utilities": [
-          ExLeiden.GraphUtils
-        ],
-        Caching: [
-          ExLeiden.Cache,
-          ExLeiden.Cache.ETS,
-          ExLeiden.Cache.Manager
-        ],
-        Utilities: [
-          ExLeiden.Utils
-        ]
-      ]
+      groups_for_modules: []
     ]
   end
 end
