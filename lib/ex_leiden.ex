@@ -7,6 +7,11 @@ defmodule ExLeiden do
   See the [README](README.md) for detailed documentation, usage examples, and algorithm overview.
   """
 
+  alias ExLeiden.Option
+
+  @type graph_input() :: term()
+  @type result() :: term()
+
   @doc """
   Detects communities in a graph using the Leiden algorithm.
 
@@ -39,16 +44,19 @@ defmodule ExLeiden do
   - `{:ok, result}` - Success with community detection results and metadata
   - `{:error, reason}` - Invalid options or input validation error
   """
-  @spec call(graph_input(), opts()) :: {:ok, result()} | {:error, map()}
-  def call(input, opts \\ [])
+  @spec call(graph_input(), keyword() | map()) :: {:ok, result()} | {:error, map()}
+  def call(input, opts \\ []) do
+    with {:ok, opts} <- Option.validate_opts(opts) do
+      {:ok, do_call(input, opts)}
+    end
+  end
 
-  # Catch-all pattern for invalid input types
-  # Returns validation error for unsupported input formats.
-  def call(%Graph{} = _graph, _opts) do
+  # Main implementation with validated options
+  defp do_call(%Graph{} = _graph, _opts) do
     {:error, %{implementation: "graph input pattern not yet implemented"}}
   end
 
-  def call(edges, _opts) when is_list(edges) do
+  defp do_call(edges, _opts) when is_list(edges) do
     # TODO: Implement tuple input processing
     # 1. Validate edges list
     # 2. Create graph structure from raw data
@@ -56,11 +64,12 @@ defmodule ExLeiden do
     {:error, %{implemtation: "tuple input pattern not yet implemented"}}
   end
 
-  def call({[], edges}, opts) when is_list(edges) do
-    call(edges, opts)
+  defp do_call({[], edges}, opts) when is_list(edges) do
+    do_call(edges, opts)
   end
 
-  def call({vertices, edges}, _opts) when is_list(vertices) and is_list(edges) do
+  defp do_call({vertices, edges}, _opts)
+       when is_list(vertices) and is_list(edges) do
     # TODO: Implement tuple input processing
     # 1. Validate vertices and edges lists
     # 2. Create graph structure from raw data
