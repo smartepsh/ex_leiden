@@ -53,7 +53,9 @@ defmodule ExLeiden.MixProject do
       links: %{
         "GitHub" => @source_url,
         "Docs" => "https://hexdocs.pm/ex_leiden",
-        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md"
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Arxiv" => "https://arxiv.org/abs/1810.08473",
+        "Doi" => "https://doi.org/10.1038/s41598-019-41695-z"
       },
       maintainers: ["Kenton Wang"]
     ]
