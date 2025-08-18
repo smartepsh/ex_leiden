@@ -356,4 +356,195 @@ defmodule ExLeiden.SourceTest do
                    end
     end
   end
+
+  describe "build!/1 with {vertices, edges} tuple" do
+    test "with simple unweighted edges" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b}, {:b, :c}, {:a, :c}]
+
+      # Vertices are already sorted alphabetically
+      expected_matrix =
+        Nx.tensor([
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with weighted edges" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b, 2}, {:b, :c, 3}, {:a, :c, 1}]
+
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(2) and :c(1)
+          [0, 2, 1],
+          # :b connects to :a(2) and :c(3)
+          [2, 0, 3],
+          # :c connects to :a(1) and :b(3)
+          [1, 3, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with edges referencing missing vertices - edges ignored" do
+      vertices = [:a, :b, :c]
+      # :d, :x, :y not in vertices
+      edges = [{:a, :b}, {:b, :d}, {:x, :y}, {:a, :c, 2}]
+
+      # Only {:a, :b} and {:a, :c, 2} should be processed
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(1) and :c(2)
+          [0, 1, 2],
+          # :b connects to :a(1) only
+          [1, 0, 0],
+          # :c connects to :a(2) only
+          [2, 0, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with mixed weighted and unweighted edges" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b}, {:b, :c, 5}, {:a, :c, 2}]
+
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(1) and :c(2)
+          [0, 1, 2],
+          # :b connects to :a(1) and :c(5)
+          [1, 0, 5],
+          # :c connects to :a(2) and :b(5)
+          [2, 5, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with duplicate edges" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b}, {:a, :b}, {:b, :c, 3}]
+
+      # Duplicate {:a, :b} should sum to weight 2
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(2) - duplicate 1+1
+          [0, 2, 0],
+          # :b connects to :a(2) and :c(3)
+          [2, 0, 3],
+          # :c connects to :b(3)
+          [0, 3, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with vertices having orphans due to missing edges" do
+      vertices = [:a, :b, :c]
+      # :c has no connections
+      edges = [{:a, :b}]
+
+      # After orphan removal, only [:a, :b] remain
+      expected_matrix =
+        Nx.tensor([
+          [0, 1],
+          [1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [:c],
+               degree_sequence: [:a, :b]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with all edges referencing missing vertices" do
+      vertices = [:a, :b, :c]
+      # No vertices match
+      edges = [{:x, :y}, {:p, :q, 5}, {:m, :n}]
+
+      # All edges ignored, results in empty indices list which fails Nx.tensor creation
+      assert_raise ArgumentError, "invalid value given to Nx.tensor/1, got: []", fn ->
+        Source.build!({vertices, edges})
+      end
+    end
+
+    test "with empty edges list" do
+      vertices = [:a, :b, :c]
+      edges = []
+
+      # Empty edges list results in empty indices which fails Nx.tensor creation
+      assert_raise ArgumentError, "invalid value given to Nx.tensor/1, got: []", fn ->
+        Source.build!({vertices, edges})
+      end
+    end
+
+    test "with partially missing vertices in edges" do
+      vertices = [:a, :b, :c, :d]
+      # :x, :y, :z not in vertices
+      edges = [{:a, :b}, {:b, :x}, {:c, :d, 2}, {:y, :z, 3}]
+
+      # Only {:a, :b} and {:c, :d, 2} should be processed
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(1)
+          [0, 1, 0, 0],
+          # :b connects to :a(1)
+          [1, 0, 0, 0],
+          # :c connects to :d(2)
+          [0, 0, 0, 2],
+          # :d connects to :c(2)
+          [0, 0, 2, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c, :d]
+             } = Source.build!({vertices, edges})
+    end
+
+    test "with invalid edge format - non-tuple elements" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b}, :invalid_edge, {:b, :c}]
+
+      assert_raise FunctionClauseError, fn ->
+        Source.build!({vertices, edges})
+      end
+    end
+
+    test "with invalid edge format - tuple with non-number weight" do
+      vertices = [:a, :b, :c]
+      edges = [{:a, :b}, {:b, :c, "invalid_weight"}]
+
+      assert_raise FunctionClauseError, fn ->
+        Source.build!({vertices, edges})
+      end
+    end
+  end
 end

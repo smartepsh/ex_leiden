@@ -87,6 +87,49 @@ defmodule ExLeiden.Source do
     |> build!()
   end
 
+  def build!({vertices, edges}) when is_list(vertices) and is_list(edges) do
+    # Create vertex-to-index map for O(1) lookups
+    vertex_to_index = vertices |> Enum.with_index() |> Map.new()
+
+    {indices, values} =
+      Enum.reduce(edges, {[], []}, fn
+        {vertex_1, vertex_2}, {index_acc, value_acc} = acc ->
+          index_1 = Map.get(vertex_to_index, vertex_1)
+          index_2 = Map.get(vertex_to_index, vertex_2)
+
+          if is_nil(index_1) or is_nil(index_2) do
+            acc
+          else
+            {[[index_1, index_2], [index_2, index_1] | index_acc], [1, 1 | value_acc]}
+          end
+
+        {vertex_1, vertex_2, weight}, {index_acc, value_acc} = acc when is_number(weight) ->
+          index_1 = Map.get(vertex_to_index, vertex_1)
+          index_2 = Map.get(vertex_to_index, vertex_2)
+
+          if is_nil(index_1) or is_nil(index_2) do
+            acc
+          else
+            {[[index_1, index_2], [index_2, index_1] | index_acc], [weight, weight | value_acc]}
+          end
+      end)
+
+    %{
+      adjacency_matrix: matrix,
+      orphan_communities: orphans,
+      degree_sequence: degree_sequence
+    } =
+      0
+      |> Nx.broadcast({length(vertices), length(vertices)})
+      |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
+      |> build!()
+
+    %__MODULE__{
+      adjacency_matrix: matrix,
+      orphan_communities: Utils.take_by_indices(vertices, orphans),
+      degree_sequence: Utils.take_by_indices(vertices, degree_sequence)
+    }
+  end
   defp is_adjacency_matrix?(matrix) do
     cond do
       is_not_square_matrix?(matrix) -> false
