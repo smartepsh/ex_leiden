@@ -6,13 +6,15 @@ defmodule ExLeiden.Option do
   @type options :: %{
           resolution: number(),
           quality_function: :modularity | :cpm,
-          max_level: pos_integer()
+          max_level: pos_integer(),
+          format: :graph | :communities_and_bridges
         }
 
   @default_opts %{
     resolution: 1,
     quality_function: :modularity,
-    max_level: 5
+    max_level: 5,
+    format: :communities_and_bridges
   }
 
   @doc """
@@ -23,16 +25,22 @@ defmodule ExLeiden.Option do
   ## Examples
 
       iex> ExLeiden.Option.validate_opts([])
-      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5}}
+      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :communities_and_bridges}}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: 2.5, quality_function: :cpm})
-      {:ok, %{resolution: 2.5, quality_function: :cpm, max_level: 5}}
+      {:ok, %{resolution: 2.5, quality_function: :cpm, max_level: 5, format: :communities_and_bridges}}
+
+      iex> ExLeiden.Option.validate_opts(%{format: :graph})
+      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :graph}}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: -1.0})
       {:error, %{resolution: "must be a positive number"}}
 
       iex> ExLeiden.Option.validate_opts(%{max_level: 0, quality_function: :invalid})
       {:error, %{max_level: "must be a positive integer", quality_function: "must be :modularity or :cpm"}}
+
+      iex> ExLeiden.Option.validate_opts(%{format: :invalid})
+      {:error, %{format: "must be :graph or :communities_and_bridges"}}
 
   """
   @spec validate_opts(map | keyword) :: {:ok, options()} | {:error, map}
@@ -92,5 +100,13 @@ defmodule ExLeiden.Option do
 
   defp validate_option(:quality_function, _value) do
     {:error, "must be :modularity or :cpm"}
+  end
+
+  defp validate_option(:format, value) when value in [:graph, :communities_and_bridges] do
+    :ok
+  end
+
+  defp validate_option(:format, _value) do
+    {:error, "must be :graph or :communities_and_bridges"}
   end
 end

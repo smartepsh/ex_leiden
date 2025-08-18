@@ -39,6 +39,9 @@ defmodule ExLeiden do
     * `:max_level` - Maximum hierarchical levels to create.
       Algorithm may stop early if no improvements possible. Defaults to `5`.
 
+    * `:format` - Result format (`:graph` or `:communities_and_bridges`).
+      Defaults to `:communities_and_bridges`.
+
   ## Returns
 
   - `{:ok, result}` - Success with community detection results and metadata

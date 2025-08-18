@@ -77,6 +77,68 @@ The algorithm behavior can be customized using various options:
   - Higher values allow more fine-grained community structure
   - Algorithm may stop early if no further improvements can be made, even before reaching max_level
 
+- `:format` - Result format (`:communities_and_bridges` or `:graph`, default: `:communities_and_bridges`)
+  - `:communities_and_bridges` - Returns communities and bridges between them
+  - `:graph` - Returns Graph structs for continued graph operations
+
+## Result Formats
+
+The algorithm can return results in two different formats, controlled by the `:format` option:
+
+### `:communities_and_bridges` Format (Default)
+
+Returns a map with integer keys (hierarchical levels) and values containing communities and bridges:
+
+```elixir
+%{
+  0 => %{
+    communities: %{
+      {0, 0} => [1, 2, 3],      # Community {0, 0} contains original vertices [1, 2, 3]
+      {0, 1} => [4, 5],         # Community {0, 1} contains original vertices [4, 5]
+      {0, 2} => [6, 7, 8]       # Community {0, 2} contains original vertices [6, 7, 8]
+    },
+    bridges: [
+      {{0, 0}, {0, 1}, 0.5},    # Bridge between communities {0, 0} and {0, 1} with weight 0.5
+      {{0, 1}, {0, 2}, 0.3}     # Bridge between communities {0, 1} and {0, 2} with weight 0.3
+    ]
+  },
+  1 => %{
+    communities: %{
+      {1, 0} => [{0, 0}, {0, 1}], # Level 1 community containing level 0 communities
+      {1, 1} => [{0, 2}]          # Level 1 community containing level 0 community
+    },
+    bridges: [
+      {{1, 0}, {1, 1}, 0.2}     # Bridge between level 1 communities
+    ]
+  }
+}
+```
+
+### `:graph` Format
+
+Returns a map with integer keys (hierarchical levels) and `Graph.t()` struct values:
+
+```elixir
+%{
+  0 => #Graph<vertices: [1, 2, 3, {0, 0}, {0, 1}, {0, 2}], edges: [...], ...>,
+  1 => #Graph<vertices: [{0, 0}, {0, 1}, {0, 2}, {1, 0}, {1, 1}], edges: [...], ...>
+}
+```
+
+This format is useful when you need to perform additional graph operations using the `libgraph` library.
+
+### Community IDs
+
+Community IDs are represented as `{level, index}` tuples:
+
+- `level` - The hierarchical level (0 = original vertices + level 0 communities, 1 = level 1 communities, etc.)
+- `index` - The community index within that level (0, 1, 2, ...)
+
+Examples:
+- `{0, 0}` - First community at level 0
+- `{0, 1}` - Second community at level 0  
+- `{1, 0}` - First community at level 1 (contains level 0 communities)
+
 ## Error Handling
 
 The only source of errors is option validation. The Leiden algorithm itself cannot fail - it always produces a valid community detection result. Invalid options return `{:error, reason}` tuples:
