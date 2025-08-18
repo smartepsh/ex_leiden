@@ -33,6 +33,7 @@ defmodule ExLeiden.MixProject do
     [
       # Core dependencies
       {:libgraph, "~> 0.16"},
+      {:nx, "~> 0.10"},
 
       # Development and testing dependencies
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
