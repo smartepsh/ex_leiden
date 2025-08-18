@@ -3,7 +3,7 @@ defmodule ExLeiden.SourceTest do
 
   alias ExLeiden.Source
 
-  describe "build!/1" do
+  describe "build!/1 with adjacency matrix" do
     test "with a valid adjacency matrix" do
       # Define a valid adjacency matrix
       matrix =
@@ -151,6 +151,112 @@ defmodule ExLeiden.SourceTest do
       # Assert that the function raises an error
       assert_raise ArgumentError, "It's not a valid adjacency matrix", fn ->
         Source.build!(matrix)
+      end
+    end
+  end
+
+  describe "build!/1 with edge list" do
+    test "with simple unweighted edge list" do
+      edges = [{:a, :b}, {:b, :c}, {:a, :c}]
+
+      # For fully connected triangle, matrix is same regardless of vertex ordering
+      expected_matrix =
+        Nx.tensor([
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!(edges)
+    end
+
+    test "with weighted edge list" do
+      edges = [{:a, :b, 2}, {:b, :c, 3}, {:a, :c, 1}]
+
+      # Vertex order: [:a, :b, :c] (alphabetically sorted)
+      # Edges: {:a,:b,2} -> [0,1], {:b,:c,3} -> [1,2], {:a,:c,1} -> [0,2]
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(2) and :c(1)
+          [0, 2, 1],
+          # :b connects to :a(2) and :c(3)
+          [2, 0, 3],
+          # :c connects to :a(1) and :b(3)
+          [1, 3, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!(edges)
+    end
+
+    test "with mixed weighted and unweighted edges" do
+      # Mix of 2-tuples and 3-tuples
+      edges = [{:a, :b}, {:b, :c, 5}, {:a, :c, 2}]
+
+      # Vertex order: [:a, :b, :c] (alphabetically sorted)
+      # Edges: {:a,:b} -> [0,1] weight 1, {:b,:c,5} -> [1,2], {:a,:c,2} -> [0,2]
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(1) and :c(2)
+          [0, 1, 2],
+          # :b connects to :a(1) and :c(5)
+          [1, 0, 5],
+          # :c connects to :a(2) and :b(5)
+          [2, 5, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!(edges)
+    end
+
+    test "with duplicate edges" do
+      # Same edge specified multiple times should be additive
+      edges = [{:a, :b}, {:a, :b}, {:b, :c, 3}]
+
+      # Vertex order: [:a, :b, :c] (alphabetically sorted)
+      # Edges: {:a,:b} twice -> [0,1] weight 1+1=2, {:b,:c,3} -> [1,2]
+      expected_matrix =
+        Nx.tensor([
+          # :a connects to :b(2) - duplicate 1+1
+          [0, 2, 0],
+          # :b connects to :a(2) and :c(3)
+          [2, 0, 3],
+          # :c connects to :b(3)
+          [0, 3, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [:a, :b, :c]
+             } = Source.build!(edges)
+    end
+
+    test "with invalid edge format - non-tuple elements" do
+      # Edge list contains non-tuple elements
+      edges = [{:a, :b}, :invalid_edge, {:b, :c}]
+
+      assert_raise FunctionClauseError, fn ->
+        Source.build!(edges)
+      end
+    end
+
+    test "with invalid edge format - tuple with non-number weight" do
+      # Edge list contains 3-tuple with non-numeric weight
+      edges = [{:a, :b}, {:b, :c, "invalid_weight"}]
+
+      assert_raise FunctionClauseError, fn ->
+        Source.build!(edges)
       end
     end
   end

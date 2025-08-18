@@ -44,6 +44,7 @@ defmodule ExLeiden.Source do
         {v1, v2, _}, acc -> acc |> MapSet.put(v1) |> MapSet.put(v2)
       end)
       |> MapSet.to_list()
+      |> Enum.sort()
 
     # Create vertex-to-index map for O(1) lookups
     vertex_to_index = vertices |> Enum.with_index() |> Map.new()
@@ -54,13 +55,13 @@ defmodule ExLeiden.Source do
           index_1 = Map.fetch!(vertex_to_index, vertex_1)
           index_2 = Map.fetch!(vertex_to_index, vertex_2)
 
-          {[[index_1, index_2] | index_acc], [1 | value_acc]}
+          {[[index_1, index_2], [index_2, index_1] | index_acc], [1, 1 | value_acc]}
 
         {vertex_1, vertex_2, weight}, {index_acc, value_acc} when is_number(weight) ->
           index_1 = Map.fetch!(vertex_to_index, vertex_1)
           index_2 = Map.fetch!(vertex_to_index, vertex_2)
 
-          {[[index_1, index_2] | index_acc], [weight | value_acc]}
+          {[[index_1, index_2], [index_2, index_1] | index_acc], [weight, weight | value_acc]}
       end)
 
     %{
@@ -70,7 +71,7 @@ defmodule ExLeiden.Source do
     } =
       0
       |> Nx.broadcast({length(vertices), length(vertices)})
-      |> Nx.indexed_add(indices, values)
+      |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
       |> build!()
 
     %__MODULE__{
