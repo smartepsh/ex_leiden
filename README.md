@@ -52,10 +52,64 @@ $$H = \sum_c \left( e_c - \gamma \binom{n_c}{2} \right)$$
 - $\gamma$ = resolution parameter (γ > 0)
 - $n_c$ = number of nodes in community $c$
 
+## Graph Input Processing
+
+ExLeiden uses the `ExLeiden.Source` module to convert various graph input formats into a standardized internal representation with adjacency matrices for efficient computation. The Source module handles:
+
+- **Format Conversion** - Accepts edge lists, 2D arrays, {vertices, edges} tuples, Nx tensors, and Graph structs
+- **Vertex Ordering** - Maintains deterministic alphabetical ordering for consistent results
+- **Orphan Detection** - Identifies and handles isolated vertices with no connections
+- **Matrix Validation** - Ensures adjacency matrices are square, symmetric, non-negative, and have zero diagonals
+- **Weight Processing** - Supports both weighted and unweighted edges, with automatic symmetrization
+
+The Source struct contains:
+
+- `adjacency_matrix` - Nx tensor representing the graph's adjacency matrix
+- `degree_sequence` - List of vertices ordered by their processing sequence
+- `orphan_communities` - List of isolated vertices removed from the main computation
+
 ## Usage
 
+ExLeiden accepts graphs in multiple formats and converts them internally to adjacency matrices for efficient computation.
+
 ```elixir
-# TODO
+# From edge list (unweighted)
+edges = [{1, 2}, {2, 3}, {3, 1}]
+{:ok, result} = ExLeiden.call(edges)
+
+# From edge list (weighted)
+weighted_edges = [{:a, :b, 0.5}, {:b, :c, 1.2}, {:c, :a, 0.8}]
+{:ok, result} = ExLeiden.call(weighted_edges)
+
+# From explicit vertices and edges
+vertices = ["alice", "bob", "carol"]
+edges = [{"alice", "bob"}, {"bob", "carol"}]
+{:ok, result} = ExLeiden.call({vertices, edges})
+
+# From adjacency matrix (2D list)
+matrix = [
+  [0, 1, 1],
+  [1, 0, 1],
+  [1, 1, 0]
+]
+{:ok, result} = ExLeiden.call(matrix)
+
+# From Nx tensor adjacency matrix
+tensor = Nx.tensor([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+{:ok, result} = ExLeiden.call(tensor)
+
+# From libgraph Graph struct
+graph = Graph.new()
+        |> Graph.add_vertices([1, 2, 3])
+        |> Graph.add_edges([{1, 2}, {2, 3}])
+{:ok, result} = ExLeiden.call(graph)
+
+# With options
+{:ok, result} = ExLeiden.call(edges, [
+  resolution: 1.5,
+  quality_function: :cpm,
+  format: :communities_and_bridges
+])
 ```
 
 ### Options
@@ -136,7 +190,7 @@ Community IDs are represented as `{level, index}` tuples:
 
 Examples:
 - `{0, 0}` - First community at level 0
-- `{0, 1}` - Second community at level 0  
+- `{0, 1}` - Second community at level 0
 - `{1, 0}` - First community at level 1 (contains level 0 communities)
 
 ## Error Handling
