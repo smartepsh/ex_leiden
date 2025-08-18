@@ -81,6 +81,12 @@ defmodule ExLeiden.Source do
     }
   end
 
+  def build!([[weight | _] | _] = matrix) when is_number(weight) do
+    matrix
+    |> Nx.tensor()
+    |> build!()
+  end
+
   defp is_adjacency_matrix?(matrix) do
     cond do
       is_not_square_matrix?(matrix) -> false

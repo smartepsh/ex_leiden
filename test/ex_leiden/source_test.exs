@@ -260,4 +260,100 @@ defmodule ExLeiden.SourceTest do
       end
     end
   end
+
+  describe "build!/1 with 2D array weights" do
+    test "with valid symmetric 2D array" do
+      # Valid adjacency matrix as 2D array
+      matrix = [
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0]
+      ]
+
+      expected_matrix =
+        Nx.tensor([
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [0, 1, 2]
+             } = Source.build!(matrix)
+    end
+
+    test "with weighted 2D array" do
+      # Weighted adjacency matrix as 2D array
+      matrix = [
+        [0, 2, 3],
+        [2, 0, 1],
+        [3, 1, 0]
+      ]
+
+      expected_matrix =
+        Nx.tensor([
+          [0, 2, 3],
+          [2, 0, 1],
+          [3, 1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [],
+               degree_sequence: [0, 1, 2]
+             } = Source.build!(matrix)
+    end
+
+    test "with 2D array containing orphan nodes" do
+      # Matrix with orphan node (index 0 has no connections)
+      matrix = [
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0]
+      ]
+
+      # After removing orphan, only indices 1,2 remain
+      expected_matrix =
+        Nx.tensor([
+          [0, 1],
+          [1, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [0],
+               degree_sequence: [1, 2]
+             } = Source.build!(matrix)
+    end
+
+    test "with invalid 2D array - non-number weights" do
+      # Matrix with non-numeric weights should fail when creating tensor
+      matrix = [
+        [0, "invalid", 0],
+        ["invalid", 0, 1],
+        [0, 1, 0]
+      ]
+
+      assert_raise ArgumentError, fn ->
+        Source.build!(matrix)
+      end
+    end
+
+    test "with invalid 2D array" do
+      # Matrix with NaN weights should fail validation
+      matrix = [
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1]
+      ]
+
+      assert_raise ArgumentError,
+                   "cannot build tensor because lists have different shapes, got {3} at position 0 and {2} at position 3",
+                   fn ->
+                     Source.build!(matrix)
+                   end
+    end
+  end
 end
