@@ -52,6 +52,22 @@ $$H = \sum_c \left( e_c - \gamma \binom{n_c}{2} \right)$$
 - $\gamma$ = resolution parameter (γ > 0)
 - $n_c$ = number of nodes in community $c$
 
+## Graph Input Processing
+
+ExLeiden uses the `ExLeiden.Source` module to convert various graph input formats into a standardized internal representation with adjacency matrices for efficient computation. The Source module handles:
+
+- **Format Conversion** - Accepts edge lists, 2D arrays, {vertices, edges} tuples, Nx tensors, and Graph structs
+- **Vertex Ordering** - Maintains deterministic alphabetical ordering for consistent results
+- **Orphan Detection** - Identifies and handles isolated vertices with no connections
+- **Matrix Validation** - Ensures adjacency matrices are square, symmetric, non-negative, and have zero diagonals
+- **Weight Processing** - Supports both weighted and unweighted edges, with automatic symmetrization
+
+The Source struct contains:
+
+- `adjacency_matrix` - Nx tensor representing the graph's adjacency matrix
+- `degree_sequence` - List of vertices ordered by their processing sequence
+- `orphan_communities` - List of isolated vertices removed from the main computation
+
 ## Usage
 
 ExLeiden accepts graphs in multiple formats and converts them internally to adjacency matrices for efficient computation.

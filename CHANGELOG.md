@@ -10,3 +10,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - [Option] add `validate_opts/2` for cast and validate options.
+- [Source] add `build!/1` for converting various graph input formats to standardized `t:Source.t()` representation.
