@@ -16,6 +16,8 @@ defmodule ExLeiden.Source do
             orphan_communities: [],
             degree_sequence: []
 
+  alias ExLeiden.Utils
+
   @spec build!(term()) :: t()
   def build!(%Nx.Tensor{} = matrix) do
     if is_adjacency_matrix?(matrix) do
@@ -31,6 +33,51 @@ defmodule ExLeiden.Source do
     else
       raise ArgumentError, "It's not a valid adjacency matrix"
     end
+  end
+
+  def build!([edge | _] = edges) when is_tuple(edge) do
+    # Use MapSet for O(1) vertex collection instead of flat_map + uniq
+    vertices =
+      edges
+      |> Enum.reduce(MapSet.new(), fn
+        {v1, v2}, acc -> acc |> MapSet.put(v1) |> MapSet.put(v2)
+        {v1, v2, _}, acc -> acc |> MapSet.put(v1) |> MapSet.put(v2)
+      end)
+      |> MapSet.to_list()
+
+    # Create vertex-to-index map for O(1) lookups
+    vertex_to_index = vertices |> Enum.with_index() |> Map.new()
+
+    {indices, values} =
+      Enum.reduce(edges, {[], []}, fn
+        {vertex_1, vertex_2}, {index_acc, value_acc} ->
+          index_1 = Map.fetch!(vertex_to_index, vertex_1)
+          index_2 = Map.fetch!(vertex_to_index, vertex_2)
+
+          {[[index_1, index_2] | index_acc], [1 | value_acc]}
+
+        {vertex_1, vertex_2, weight}, {index_acc, value_acc} when is_number(weight) ->
+          index_1 = Map.fetch!(vertex_to_index, vertex_1)
+          index_2 = Map.fetch!(vertex_to_index, vertex_2)
+
+          {[[index_1, index_2] | index_acc], [weight | value_acc]}
+      end)
+
+    %{
+      adjacency_matrix: matrix,
+      orphan_communities: orphans,
+      degree_sequence: degree_sequence
+    } =
+      0
+      |> Nx.broadcast({length(vertices), length(vertices)})
+      |> Nx.indexed_add(indices, values)
+      |> build!()
+
+    %__MODULE__{
+      adjacency_matrix: matrix,
+      orphan_communities: Utils.take_by_indices(vertices, orphans),
+      degree_sequence: Utils.take_by_indices(vertices, degree_sequence)
+    }
   end
 
   defp is_adjacency_matrix?(matrix) do
