@@ -3,6 +3,68 @@ defmodule ExLeiden.Source do
   Internal representation of graph data for the Leiden algorithm.
 
   Converts various input formats into a standardized adjacency matrix representation, using Nx tensors for efficient numerical computation.
+
+  ## Graph Input Processing
+
+  The Source module handles conversion of various graph input formats into a standardized internal representation with adjacency matrices for efficient computation. Key features include:
+
+  - **Format Conversion** - Accepts edge lists, 2D arrays, {vertices, edges} tuples, Nx tensors, and Graph structs
+  - **Vertex Ordering** - Maintains deterministic alphabetical ordering for consistent results
+  - **Orphan Detection** - Identifies and handles isolated vertices with no connections
+  - **Matrix Validation** - Ensures adjacency matrices are square, symmetric, non-negative, and have zero diagonals
+  - **Weight Processing** - Supports both weighted and unweighted edges, with automatic symmetrization
+
+  ## Source Struct
+
+  The Source struct contains:
+
+  - `adjacency_matrix` - Nx tensor representing the graph's adjacency matrix
+  - `degree_sequence` - List of vertices ordered by their processing sequence
+  - `orphan_communities` - List of isolated vertices removed from the main computation
+
+  ## Supported Input Formats
+
+  ### Edge Lists
+  ```elixir
+  # Unweighted edges
+  edges = [{:a, :b}, {:b, :c}, {:a, :c}]
+  Source.build!(edges)
+
+  # Weighted edges
+  weighted_edges = [{:a, :b, 2}, {:b, :c, 3}, {:a, :c, 1}]
+  Source.build!(weighted_edges)
+  ```
+
+  ### 2D Array Adjacency Matrices
+  ```elixir
+  matrix = [
+    [0, 1, 1],
+    [1, 0, 1], 
+    [1, 1, 0]
+  ]
+  Source.build!(matrix)
+  ```
+
+  ### Vertices and Edges Tuple
+  ```elixir
+  vertices = [:a, :b, :c]
+  edges = [{:a, :b}, {:b, :c}]
+  Source.build!({vertices, edges})
+  ```
+
+  ### Nx Tensor Adjacency Matrices
+  ```elixir
+  tensor = Nx.tensor([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+  Source.build!(tensor)
+  ```
+
+  ### Graph Structs (libgraph)
+  ```elixir
+  graph = Graph.new(type: :undirected)
+          |> Graph.add_edge(:a, :b, weight: 2)
+          |> Graph.add_edge(:b, :c, weight: 3)
+  Source.build!(graph)
+  ```
   """
 
   @type community :: any()
