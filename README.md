@@ -37,12 +37,12 @@ This approach guarantees well-connected communities and addresses the resolution
 
 ### Quality Functions
 
-ExLeiden supports two quality functions for community detection:
+ExLeiden will support two quality functions for community detection:
 
-#### Modularity
+#### Modularity (Planned)
 $$H = \frac{1}{2m} \sum_c \left( e_c - \gamma \frac{K_c^2}{2m} \right)$$
 
-#### Constant Potts Model (CPM)
+#### Constant Potts Model (CPM) (Planned)
 $$H = \sum_c \left( e_c - \gamma \binom{n_c}{2} \right)$$
 
 **Where:**
@@ -188,3 +188,13 @@ The only source of errors is option validation. The Leiden algorithm itself cann
   quality_function: "must be :modularity or :cpm"
 }}
 ```
+
+## TODOs
+
+- [ ] **Vectorized Tensor Operations**: Implement fully vectorized matrix operations throughout the algorithm for significant performance improvements
+- [ ] **Quality Function Implementations**: Implement the two main quality functions for community detection
+  - [ ] **Modularity**
+  - [ ] **Constant Potts Model (CPM)**
+- [ ] **Benchmarking Suite**: Implement comprehensive performance benchmarks
+  - [ ] Network size scalability tests (100 to 100,000+ nodes)
+  - [ ] GPU vs CPU performance comparisons
