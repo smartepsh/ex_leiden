@@ -130,6 +130,22 @@ defmodule ExLeiden.Source do
       degree_sequence: Utils.take_by_indices(vertices, degree_sequence)
     }
   end
+
+  def build!(%Graph{type: :undirected} = graph) do
+    vertices = Graph.vertices(graph)
+
+    edges =
+      graph
+      |> Graph.edges()
+      |> Enum.map(fn %{v1: v1, v2: v2, weight: weight} ->
+        {v1, v2, weight}
+      end)
+
+    build!({vertices, edges})
+  end
+
+  def build!(_), do: raise(ArgumentError, "The graph should be the undirected or bi-directed")
+
   defp is_adjacency_matrix?(matrix) do
     cond do
       is_not_square_matrix?(matrix) -> false

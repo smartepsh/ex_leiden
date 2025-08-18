@@ -547,4 +547,34 @@ defmodule ExLeiden.SourceTest do
       end
     end
   end
+
+  describe "build!/1 with Graph" do
+    test "with directed graph" do
+      # Create a simple directed graph
+      graph =
+        Graph.new(type: :undirected)
+        |> Graph.add_edge(:a, :b, weight: 2)
+        |> Graph.add_edge(:b, :c, weight: 3)
+        |> Graph.add_edge(:a, :c, weight: 1)
+
+      # Should work with directed graphs
+      result = Source.build!(graph)
+
+      # Verify it returns a Source struct
+      assert %Source{} = result
+      assert is_list(result.degree_sequence)
+      assert %Nx.Tensor{} = result.adjacency_matrix
+      assert is_list(result.orphan_communities)
+    end
+
+    test "with unsupported graph type - raises error" do
+      # Create an unsupported graph (undirected in this case based on the catch-all)
+      graph = Graph.new(type: :directed)
+
+      # Should raise error for non-directed graphs
+      assert_raise ArgumentError, "The graph should be the undirected or bi-directed", fn ->
+        Source.build!(graph)
+      end
+    end
+  end
 end
