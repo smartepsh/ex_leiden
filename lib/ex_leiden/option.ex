@@ -3,19 +3,19 @@ defmodule ExLeiden.Option do
   Option validation for ExLeiden algorithm.
   """
 
-  @type options :: %{
+  @type options :: [
           resolution: number(),
           quality_function: :modularity | :cpm,
           max_level: pos_integer(),
           format: :graph | :communities_and_bridges
-        }
+        ]
 
-  @default_opts %{
+  @default_opts [
     resolution: 1,
     quality_function: :modularity,
     max_level: 5,
     format: :communities_and_bridges
-  }
+  ]
 
   @doc """
   Validates and applies options from a keyword list or map.
@@ -25,13 +25,13 @@ defmodule ExLeiden.Option do
   ## Examples
 
       iex> ExLeiden.Option.validate_opts([])
-      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :communities_and_bridges}}
+      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, format: :communities_and_bridges]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: 2.5, quality_function: :cpm})
-      {:ok, %{resolution: 2.5, quality_function: :cpm, max_level: 5, format: :communities_and_bridges}}
+      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, format: :communities_and_bridges]}
 
       iex> ExLeiden.Option.validate_opts(%{format: :graph})
-      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :graph}}
+      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, format: :graph]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: -1.0})
       {:error, %{resolution: "must be a positive number"}}
@@ -66,7 +66,7 @@ defmodule ExLeiden.Option do
       end)
 
     if Enum.all?(opt_tuples, &match?({:ok, _}, &1)) do
-      {:ok, Map.new(opt_tuples, &elem(&1, 1))}
+      {:ok, Enum.map(opt_tuples, &elem(&1, 1))}
     else
       reason =
         opt_tuples
