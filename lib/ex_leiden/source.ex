@@ -39,7 +39,7 @@ defmodule ExLeiden.Source do
   ```elixir
   matrix = [
     [0, 1, 1],
-    [1, 0, 1], 
+    [1, 0, 1],
     [1, 1, 0]
   ]
   Source.build!(matrix)
@@ -66,6 +66,13 @@ defmodule ExLeiden.Source do
   Source.build!(graph)
   ```
   """
+  alias ExLeiden.Utils
+
+  defmodule Behaviour do
+    @callback build!(term()) :: ExLeiden.Source.t()
+  end
+
+  @behaviour Behaviour
 
   @type community :: any()
   @type t :: %__MODULE__{
@@ -78,9 +85,7 @@ defmodule ExLeiden.Source do
             orphan_communities: [],
             degree_sequence: []
 
-  alias ExLeiden.Utils
-
-  @spec build!(term()) :: t()
+  @impl true
   def build!(%Nx.Tensor{} = matrix) do
     if is_adjacency_matrix?(matrix) do
       vertex_count = matrix |> Nx.shape() |> elem(0)

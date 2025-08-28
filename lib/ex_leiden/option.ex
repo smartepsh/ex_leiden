@@ -10,6 +10,12 @@ defmodule ExLeiden.Option do
           format: :graph | :communities_and_bridges
         ]
 
+  defmodule Behaviour do
+    @callback validate_opts(map | keyword) :: {:ok, ExLeiden.Option.options()} | {:error, map}
+  end
+
+  @behaviour Behaviour
+
   @default_opts [
     resolution: 1,
     quality_function: :modularity,
@@ -43,7 +49,7 @@ defmodule ExLeiden.Option do
       {:error, %{format: "must be :graph or :communities_and_bridges"}}
 
   """
-  @spec validate_opts(map | keyword) :: {:ok, options()} | {:error, map}
+  @impl true
   def validate_opts(opts) when is_list(opts) do
     opts
     |> Map.new()

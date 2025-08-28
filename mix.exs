@@ -16,9 +16,14 @@ defmodule ExLeiden.MixProject do
       docs: docs(),
       name: "ExLeiden",
       source_url: @source_url,
-      homepage_url: @source_url
+      homepage_url: @source_url,
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help compile.app" to learn about applications.
   def application do
@@ -37,7 +42,8 @@ defmodule ExLeiden.MixProject do
 
       # Development and testing dependencies
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:hammox, "~> 0.7", only: :test}
     ]
   end
 
