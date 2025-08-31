@@ -4,4 +4,5 @@ import Config
 config :ex_leiden, :mocks,
   leiden: ExLeiden.LeidenMock,
   option: ExLeiden.OptionMock,
-  source: ExLeiden.SourceMock
+  source: ExLeiden.SourceMock,
+  modularity_quality: ExLeiden.Quality.ModularityMock

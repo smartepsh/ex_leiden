@@ -1,4 +1,6 @@
 defmodule ExLeiden.Quality.Modularity do
+  @behaviour ExLeiden.Quality.Behaviour
+
   @moduledoc """
   Modularity quality function for the Leiden algorithm.
 
@@ -52,6 +54,7 @@ defmodule ExLeiden.Quality.Modularity do
           network_total_edges :: number(),
           opts :: keyword()
         ) :: {best_community :: non_neg_integer(), best_delta_q :: float()}
+  @impl true
   def best_move(_adjacency_matrix, current_node, community_matrix, 0, _opts) do
     # Empty graph case - no edges, no meaningful moves
     current_community = find_current_community(community_matrix, current_node)
@@ -82,7 +85,6 @@ defmodule ExLeiden.Quality.Modularity do
       |> Enum.map(fn community_idx ->
         delta =
           calculate_modularity_delta(
-            current_node,
             current_community,
             community_idx,
             node_degree,
@@ -128,10 +130,9 @@ defmodule ExLeiden.Quality.Modularity do
   end
 
   # Calculate modularity delta for moving a node from current to target community
-  defp calculate_modularity_delta(_, community, community, _, _, _, _, _), do: 0.0
+  defp calculate_modularity_delta(community, community, _, _, _, _, _), do: 0.0
 
   defp calculate_modularity_delta(
-         node_idx,
          current_community,
          target_community,
          node_degree,
