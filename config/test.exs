@@ -5,4 +5,5 @@ config :ex_leiden, :mocks,
   leiden: ExLeiden.LeidenMock,
   option: ExLeiden.OptionMock,
   source: ExLeiden.SourceMock,
-  modularity_quality: ExLeiden.Quality.ModularityMock
+  modularity_quality: ExLeiden.Quality.ModularityMock,
+  cpm_quality: ExLeiden.Quality.CPMMock
