@@ -5,6 +5,7 @@ config :ex_leiden, :mocks,
   leiden: ExLeiden.Leiden,
   option: ExLeiden.Option,
   source: ExLeiden.Source,
+  local_move: ExLeiden.Leiden.LocalMove,
   modularity_quality: ExLeiden.Quality.Modularity,
   cpm_quality: ExLeiden.Quality.CPM
 
