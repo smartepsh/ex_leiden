@@ -9,7 +9,7 @@ defmodule ExLeiden.Quality.CPM do
 
   CPM measures community quality by optimizing internal edges minus a resolution penalty.
   The CPM delta formula used here is:
-  ΔQ = (edges_to_new - edges_to_old) - γ * (size_new - size_old + 1)
+  ΔQ = (edges_to_new - edges_to_old) - γ * (size_new - size_old + 1) / 2
 
   Where:
   - edges_to_new/old are edges from node i to new/old communities
@@ -27,7 +27,7 @@ defmodule ExLeiden.Quality.CPM do
 
     - `adjacency_matrix` - The adjacency matrix of the graph (n x n tensor)
     - `current_node` - Index of the node to find best move for
-    - `community_matrix` - Current community assignment matrix (n x c binary matrix)
+    - `partition_matrix` - Current community assignment matrix (n x c binary matrix)
     - `total_edges` - Total edge weight in the graph (scalar)
     - `opts` - Options including `:resolution` parameter (default: 1.0)
 
@@ -40,102 +40,107 @@ defmodule ExLeiden.Quality.CPM do
   ## Examples
 
       iex> adjacency = Nx.tensor([[0, 1, 1], [1, 0, 0], [1, 0, 0]])
-      iex> community_matrix = Nx.eye(3)  # Each node in own community
-      iex> {best_community, delta_q} = ExLeiden.Quality.CPM.best_move(adjacency, 0, community_matrix, 2.0, [resolution: 1.0])
+      iex> partition_matrix = Nx.eye(3)  # Each node in own community
+      iex> {best_community, delta_q} = ExLeiden.Quality.CPM.best_move(adjacency, 0, partition_matrix, 2.0, [resolution: 1.0])
 
   """
   @spec best_move(
           adjacency_matrix :: Nx.Tensor.t(),
           node_index :: non_neg_integer(),
-          community_matrix :: Nx.Tensor.t(),
+          partition_matrix :: Nx.Tensor.t(),
           network_total_edges :: number(),
           opts :: keyword()
         ) :: {best_community :: non_neg_integer(), best_delta_q :: float()}
   @impl true
-  def best_move(_adjacency_matrix, current_node, community_matrix, 0, _opts) do
+  def best_move(_adjacency_matrix, node_index, partition_matrix, 0, _opts) do
     # Empty graph case - no edges, no meaningful moves
-    current_community = find_current_community(community_matrix, current_node)
+    current_community =
+      partition_matrix[node_index]
+      |> Nx.argmax()
+      |> Nx.to_number()
+
     {current_community, 0.0}
   end
 
-  def best_move(adjacency_matrix, current_node, community_matrix, _total_edges, opts) do
+  def best_move(adjacency_matrix, node_index, partition_matrix, total_edges, opts) do
+    deltas = delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts)
+
+    best_community = deltas |> Nx.argmax() |> Nx.to_number()
+    best_gain = deltas[best_community] |> Nx.to_number()
+
+    {best_community, best_gain}
+  end
+
+  @doc """
+  Calculate CPM delta gains for moving a node from current community to all communities.
+
+  This function calculates the complete quality delta for moving a node to each community,
+  accounting for both the gain from joining the target and loss from leaving current.
+
+  CPM Quality: Q = Σ[e_c - γ * n_c / 2]
+  Complete Delta: ΔQ = (edges_to_target - edges_to_current) - γ * (n_target - n_current + 1) / 2
+
+  ## Parameters
+
+    - `adjacency_matrix` - The adjacency matrix of the graph (n x n tensor)
+    - `node_index` - Index of the node to calculate deltas for
+    - `partition_matrix` - Community assignment matrix (n x c binary matrix)
+    - `total_edges` - Total edge weight in the graph (unused in CPM)
+    - `opts` - Options including `:resolution` parameter
+
+  ## Returns
+
+    A tensor of complete quality deltas for each community (c-dimensional tensor)
+
+  """
+  @spec delta_gains(
+          adjacency_matrix :: Nx.Tensor.t(),
+          node_index :: non_neg_integer(),
+          partition_matrix :: Nx.Tensor.t(),
+          total_edges :: number(),
+          opts :: keyword
+        ) :: Nx.Tensor.t()
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, _total_edges, opts) do
     resolution = Keyword.fetch!(opts, :resolution)
 
-    # Find current community of the node
-    current_community = find_current_community(community_matrix, current_node)
-
     # Get node's adjacency row
-    node_row = adjacency_matrix[current_node]
+    node_row = adjacency_matrix[node_index]
 
-    # Calculate edges from current node to each community
-    edges_to_communities = calculate_edges_to_communities(node_row, community_matrix)
+    # Calculate edges from node to ALL communities at once
+    edges_to_all_communities = Nx.dot(node_row, partition_matrix)
 
-    # Calculate community sizes
-    community_sizes = calculate_community_sizes(community_matrix)
+    # Get all community sizes
+    all_community_sizes = Nx.sum(partition_matrix, axes: [0])
 
-    # Find best move by calculating deltas for all communities
-    {n_communities} = Nx.shape(community_sizes)
+    # Find current community of the node using actual node index
+    current_community_mask = partition_matrix[node_index]
+    current_community_idx = Nx.argmax(current_community_mask)
 
-    {best_community, best_delta} =
-      0..(n_communities - 1)
-      |> Enum.map(fn community_idx ->
-        delta =
-          calculate_cpm_delta(
-            current_community,
-            community_idx,
-            edges_to_communities,
-            community_sizes,
-            resolution
-          )
+    # Get edges to current community and current community size (keep as tensors)
+    edges_to_current = Nx.take(edges_to_all_communities, current_community_idx)
+    current_community_size = Nx.take(all_community_sizes, current_community_idx)
 
-        {community_idx, delta}
-      end)
-      |> Enum.max_by(fn {_community, delta} -> delta end)
+    # Calculate sizes after move
+    target_sizes_after = Nx.add(all_community_sizes, 1)
+    current_size_after = Nx.subtract(current_community_size, 1)
 
-    {best_community, best_delta}
-  end
+    # Calculate penalty changes using tensor operations (CPM uses linear size, not squared)
+    penalty_changes =
+      target_sizes_after
+      |> Nx.subtract(current_size_after)
+      |> Nx.divide(2)
+      |> Nx.multiply(resolution)
 
-  # Find which community a node currently belongs to
-  defp find_current_community(community_matrix, node_idx) do
-    community_matrix[node_idx]
-    |> Nx.argmax()
-    |> Nx.to_number()
-  end
+    # Create mask for current community (self-move case)
+    current_community_mask =
+      Nx.equal(Nx.iota({Nx.axis_size(all_community_sizes, 0)}), current_community_idx)
 
-  # Calculate edges from a node to each community
-  defp calculate_edges_to_communities(node_row, community_matrix) do
-    # node_row × community_matrix = edges to each community
-    # Nx handles vector-matrix multiplication automatically
-    Nx.dot(node_row, community_matrix)
-  end
+    # Set self-move penalty to 0
+    penalty_changes = Nx.select(current_community_mask, 0, penalty_changes)
 
-  # Calculate number of nodes in each community
-  defp calculate_community_sizes(community_matrix) do
-    # Sum each column to get community sizes
-    Nx.sum(community_matrix, axes: [0])
-  end
-
-  # Calculate CPM delta for moving a node from current to target community
-  defp calculate_cpm_delta(community, community, _, _, _), do: 0.0
-
-  defp calculate_cpm_delta(
-         current_community,
-         target_community,
-         edges_to_communities,
-         community_sizes,
-         resolution
-       ) do
-    # Extract values
-    edges_to_current = Nx.to_number(edges_to_communities[current_community])
-    edges_to_target = Nx.to_number(edges_to_communities[target_community])
-    size_current = Nx.to_number(community_sizes[current_community])
-    size_target = Nx.to_number(community_sizes[target_community])
-
-    # Calculate CPM delta
-    # ΔQ = (edges_to_new - edges_to_old) - γ * (size_new - size_old + 1)
-    edge_delta = edges_to_target - edges_to_current
-    size_penalty = resolution * (size_target - size_current + 1)
-
-    edge_delta - size_penalty
+    # Complete CPM delta: (edges_to_target - edges_to_current) - penalty_change
+    edges_to_all_communities
+    |> Nx.subtract(edges_to_current)
+    |> Nx.subtract(penalty_changes)
   end
 end
