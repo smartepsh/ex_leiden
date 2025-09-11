@@ -3,19 +3,25 @@ defmodule ExLeiden.Option do
   Option validation for ExLeiden algorithm.
   """
 
-  @type options :: %{
+  @type options :: [
           resolution: number(),
           quality_function: :modularity | :cpm,
           max_level: pos_integer(),
-          format: :graph | :communities_and_bridges
-        }
+          theta: number()
+        ]
 
-  @default_opts %{
+  defmodule Behaviour do
+    @callback validate_opts(map | keyword) :: {:ok, ExLeiden.Option.options()} | {:error, map}
+  end
+
+  @behaviour Behaviour
+
+  @default_opts [
     resolution: 1,
     quality_function: :modularity,
     max_level: 5,
-    format: :communities_and_bridges
-  }
+    theta: 0.01
+  ]
 
   @doc """
   Validates and applies options from a keyword list or map.
@@ -25,13 +31,10 @@ defmodule ExLeiden.Option do
   ## Examples
 
       iex> ExLeiden.Option.validate_opts([])
-      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :communities_and_bridges}}
+      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: 2.5, quality_function: :cpm})
-      {:ok, %{resolution: 2.5, quality_function: :cpm, max_level: 5, format: :communities_and_bridges}}
-
-      iex> ExLeiden.Option.validate_opts(%{format: :graph})
-      {:ok, %{resolution: 1, quality_function: :modularity, max_level: 5, format: :graph}}
+      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: -1.0})
       {:error, %{resolution: "must be a positive number"}}
@@ -39,11 +42,9 @@ defmodule ExLeiden.Option do
       iex> ExLeiden.Option.validate_opts(%{max_level: 0, quality_function: :invalid})
       {:error, %{max_level: "must be a positive integer", quality_function: "must be :modularity or :cpm"}}
 
-      iex> ExLeiden.Option.validate_opts(%{format: :invalid})
-      {:error, %{format: "must be :graph or :communities_and_bridges"}}
 
   """
-  @spec validate_opts(map | keyword) :: {:ok, options()} | {:error, map}
+  @impl true
   def validate_opts(opts) when is_list(opts) do
     opts
     |> Map.new()
@@ -66,7 +67,7 @@ defmodule ExLeiden.Option do
       end)
 
     if Enum.all?(opt_tuples, &match?({:ok, _}, &1)) do
-      {:ok, Map.new(opt_tuples, &elem(&1, 1))}
+      {:ok, Enum.map(opt_tuples, &elem(&1, 1))}
     else
       reason =
         opt_tuples
@@ -102,11 +103,11 @@ defmodule ExLeiden.Option do
     {:error, "must be :modularity or :cpm"}
   end
 
-  defp validate_option(:format, value) when value in [:graph, :communities_and_bridges] do
+  defp validate_option(:theta, value) when is_number(value) and value > 0 do
     :ok
   end
 
-  defp validate_option(:format, _value) do
-    {:error, "must be :graph or :communities_and_bridges"}
+  defp validate_option(:theta, _value) do
+    {:error, "must be a positive number"}
   end
 end
