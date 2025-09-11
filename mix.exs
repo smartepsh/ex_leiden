@@ -1,7 +1,7 @@
 defmodule ExLeiden.MixProject do
   use Mix.Project
 
-  @version "0.0.3"
+  @version "0.1.0"
   @source_url "https://github.com/smartepsh/ex_leiden"
 
   def project do

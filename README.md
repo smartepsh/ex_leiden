@@ -6,6 +6,8 @@ A pure Elixir implementation of the Leiden algorithm for community detection in 
 
 The Leiden algorithm improves upon the Louvain method by addressing the resolution limit problem and ensuring communities that are well-connected internally.
 
+> **Note:** This is a work-in-progress implementation. The core algorithm structure is complete, but the API and result format may change before v1.0.
+
 > **Note:** For the best reading experience with properly rendered mathematical formulas, view this README on [GitHub](https://github.com/smartepsh/ex_leiden#readme).
 
 ## Installation
@@ -37,12 +39,12 @@ This approach guarantees well-connected communities and addresses the resolution
 
 ### Quality Functions
 
-ExLeiden will support two quality functions for community detection:
+ExLeiden supports two quality functions for community detection:
 
-#### Modularity (Planned)
+#### Modularity
 $$H = \frac{1}{2m} \sum_c \left( e_c - \gamma \frac{K_c^2}{2m} \right)$$
 
-#### Constant Potts Model (CPM) (Planned)
+#### Constant Potts Model (CPM)
 $$H = \sum_c \left( e_c - \gamma \binom{n_c}{2} \right)$$
 
 **Where:**
@@ -91,8 +93,7 @@ graph = Graph.new()
 # With options
 {:ok, result} = ExLeiden.call(edges, [
   resolution: 1.5,
-  quality_function: :cpm,
-  format: :communities_and_bridges
+  quality_function: :cpm
 ])
 ```
 
@@ -115,67 +116,42 @@ The algorithm behavior can be customized using various options:
   - Higher values allow more fine-grained community structure
   - Algorithm may stop early if no further improvements can be made, even before reaching max_level
 
-- `:format` - Result format (`:communities_and_bridges` or `:graph`, default: `:communities_and_bridges`)
-  - `:communities_and_bridges` - Returns communities and bridges between them
-  - `:graph` - Returns Graph structs for continued graph operations
-
-## Result Formats
-
-The algorithm can return results in two different formats, controlled by the `:format` option:
-
-### `:communities_and_bridges` Format (Default)
+## Result Format
 
 Returns a map with integer keys (hierarchical levels) and values containing communities and bridges:
 
 ```elixir
 %{
-  0 => %{
-    communities: %{
-      {0, 0} => [1, 2, 3],      # Community {0, 0} contains original vertices [1, 2, 3]
-      {0, 1} => [4, 5],         # Community {0, 1} contains original vertices [4, 5]
-      {0, 2} => [6, 7, 8]       # Community {0, 2} contains original vertices [6, 7, 8]
-    },
+  1 => %{
+    communities: [
+      %{id: 0, children: [1, 2, 3]},    # Community 0 contains nodes [1, 2, 3]
+      %{id: 1, children: [4, 5]},       # Community 1 contains nodes [4, 5]
+      %{id: 2, children: [6, 7, 8]}     # Community 2 contains nodes [6, 7, 8]
+    ],
     bridges: [
-      {{0, 0}, {0, 1}, 0.5},    # Bridge between communities {0, 0} and {0, 1} with weight 0.5
-      {{0, 1}, {0, 2}, 0.3}     # Bridge between communities {0, 1} and {0, 2} with weight 0.3
+      {0, 1, 0.5},    # Bridge between community 0 and 1 with weight 0.5
+      {1, 2, 0.3}     # Bridge between community 1 and 2 with weight 0.3
     ]
   },
-  1 => %{
-    communities: %{
-      {1, 0} => [{0, 0}, {0, 1}], # Level 1 community containing level 0 communities
-      {1, 1} => [{0, 2}]          # Level 1 community containing level 0 community
-    },
+  2 => %{
+    communities: [
+      %{id: 0, children: [0, 1]},       # Level 2 community contains level 1 communities 0 and 1
+      %{id: 1, children: [2]}           # Level 2 community contains level 1 community 2
+    ],
     bridges: [
-      {{1, 0}, {1, 1}, 0.2}     # Bridge between level 1 communities
+      {0, 1, 0.2}     # Bridge between level 2 communities
     ]
   }
 }
 ```
 
-### `:graph` Format
+### Structure Details
 
-Returns a map with integer keys (hierarchical levels) and `Graph.t()` struct values:
-
-```elixir
-%{
-  0 => #Graph<vertices: [1, 2, 3, {0, 0}, {0, 1}, {0, 2}], edges: [...], ...>,
-  1 => #Graph<vertices: [{0, 0}, {0, 1}, {0, 2}, {1, 0}, {1, 1}], edges: [...], ...>
-}
-```
-
-This format is useful when you need to perform additional graph operations using the `libgraph` library.
-
-### Community IDs
-
-Community IDs are represented as `{level, index}` tuples:
-
-- `level` - The hierarchical level (0 = original vertices + level 0 communities, 1 = level 1 communities, etc.)
-- `index` - The community index within that level (0, 1, 2, ...)
-
-Examples:
-- `{0, 0}` - First community at level 0
-- `{0, 1}` - Second community at level 0
-- `{1, 0}` - First community at level 1 (contains level 0 communities)
+- **Level Keys**: Integer keys represent hierarchical levels (1, 2, 3, ...)
+- **Communities**: List of community assignments with:
+  - `id`: Community identifier within the level
+  - `children`: List of node indices (level 1) or community IDs (higher levels)
+- **Bridges**: List of inter-community connections as `{community_a, community_b, weight}` tuples
 
 ## Error Handling
 
@@ -189,12 +165,26 @@ The only source of errors is option validation. The Leiden algorithm itself cann
 }}
 ```
 
-## TODOs
+## Implementation Status
 
-- [ ] **Vectorized Tensor Operations**: Implement fully vectorized matrix operations throughout the algorithm for significant performance improvements
-- [ ] **Quality Function Implementations**: Implement the two main quality functions for community detection
-  - [ ] **Modularity**
-  - [ ] **Constant Potts Model (CPM)**
+### ✅ Completed Features
+
+- **Core Algorithm**: All three phases of the Leiden algorithm are fully implemented
+  - **Local Moving Phase**: Queue-based node processing with matrix-optimized delta calculations
+  - **Refinement Phase**: Well-connected community splitting with γ-connectivity validation
+  - **Aggregation Phase**: Hierarchical community network construction
+- **Quality Functions**: Both main quality functions are fully implemented
+  - **Modularity**: Complete vectorized implementation with resolution parameter support
+  - **Constant Potts Model (CPM)**: Complete implementation with linear penalty calculation
+
+### 🚧 TODOs
+
+- [ ] **Iteration Implementation**: Replace memory-intensive matrix operations with streaming approaches
+  - [ ] **Memory-efficient Data Structures**: Use sparse representations and lazy evaluation for large networks
+  - [ ] **Flow Parallel Processing**: Implement GenStage/Flow pipelines for parallel node processing
+- [ ] **Performance Optimizations**: Additional optimizations for large graphs
+  - [ ] Memory usage optimization for very large networks
+  - [ ] Parallel processing for independent community refinement
 - [ ] **Benchmarking Suite**: Implement comprehensive performance benchmarks
   - [ ] Network size scalability tests (100 to 100,000+ nodes)
-  - [ ] GPU vs CPU performance comparisons
+  - [ ] Comparison with reference implementations
