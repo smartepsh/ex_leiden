@@ -1,8 +1,5 @@
 defmodule ExLeiden.Leiden.RefinePartition do
-  require ExLeiden.Utils, as: Utils
-
-  @modularity_mod Utils.module(:modularity_quality)
-  @cpm_mod Utils.module(:cpm_quality)
+  alias ExLeiden.Utils
 
   defmodule Behaviour do
     @callback call(Nx.Tensor.t(), Nx.Tensor.t(), keyword()) :: Nx.Tensor.t()
@@ -417,8 +414,8 @@ defmodule ExLeiden.Leiden.RefinePartition do
     # Delegate to quality module functions
     module =
       case Keyword.fetch!(opts, :quality_function) do
-        :cpm -> @cpm_mod
-        :modularity -> @modularity_mod
+        :cpm -> Utils.module(:cpm_quality)
+        :modularity -> Utils.module(:modularity_quality)
       end
 
     module.delta_gains(subset_adjacency_matrix, node_idx, partition_matrix, total_edges, opts)

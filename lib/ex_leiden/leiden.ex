@@ -1,6 +1,6 @@
 defmodule ExLeiden.Leiden do
   alias ExLeiden.Source
-  require ExLeiden.Utils, as: Utils
+  alias ExLeiden.Utils
 
   defmodule Behaviour do
     @type community_assignment :: %{id: integer(), children: [integer()]}
@@ -16,9 +16,6 @@ defmodule ExLeiden.Leiden do
   end
 
   @behaviour Behaviour
-  @local_move_mod Utils.module(:local_move)
-  @refine_partition_mod Utils.module(:refine_partition)
-  @aggregate_mod Utils.module(:aggregate)
 
   @impl true
   def call(%Source{} = source, opts \\ []) do
@@ -33,7 +30,7 @@ defmodule ExLeiden.Leiden do
       results
     else
       # Step 1: Local moving phase
-      community_matrix_after_local = @local_move_mod.call(source, opts)
+      community_matrix_after_local = Utils.module(:local_move).call(source, opts)
 
       # Check for convergence - if all communities are singletons, no more improvement possible
       if all_communities_are_singletons?(community_matrix_after_local) do
@@ -41,13 +38,18 @@ defmodule ExLeiden.Leiden do
       else
         # Step 2: Refinement phase
         refined_community_matrix =
-          @refine_partition_mod.call(source.adjacency_matrix, community_matrix_after_local, opts)
+          Utils.module(:refine_partition).call(
+            source.adjacency_matrix,
+            community_matrix_after_local,
+            opts
+          )
 
         # Create communities for current level from refinement matrix
         current_communities = create_communities_from_refinement_matrix(refined_community_matrix)
 
         # Step 3: Aggregation phase - create new source for next level
-        aggregated_source = @aggregate_mod.call(source.adjacency_matrix, refined_community_matrix)
+        aggregated_source =
+          Utils.module(:aggregate).call(source.adjacency_matrix, refined_community_matrix)
 
         # Extract bridges from aggregated adjacency matrix
         current_bridges =

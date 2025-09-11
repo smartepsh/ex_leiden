@@ -7,11 +7,7 @@ defmodule ExLeiden do
   See the [README](README.md) for detailed documentation, usage examples, and algorithm overview.
   """
 
-  require ExLeiden.Utils, as: Utils
-
-  @leiden_mod Utils.module(:leiden)
-  @option_mod Utils.module(:option)
-  @source_mod Utils.module(:source)
+  alias ExLeiden.Utils
 
   # Input format types
   @type vertex() :: term()
@@ -63,11 +59,11 @@ defmodule ExLeiden do
   """
   @spec call(input(), keyword() | map()) :: {:ok, result()} | {:error, map()}
   def call(input, opts \\ []) do
-    with {:ok, validated_opts} <- @option_mod.validate_opts(opts) do
+    with {:ok, validated_opts} <- Utils.module(:option).validate_opts(opts) do
       result =
         input
-        |> @source_mod.build!()
-        |> @leiden_mod.call(validated_opts)
+        |> Utils.module(:source).build!()
+        |> Utils.module(:leiden).call(validated_opts)
 
       {:ok, result}
     end

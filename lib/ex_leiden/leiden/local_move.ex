@@ -20,10 +20,7 @@ defmodule ExLeiden.Leiden.LocalMove do
 
   alias ExLeiden.Source
 
-  require ExLeiden.Utils, as: Utils
-
-  @modularity_mod Utils.module(:modularity_quality)
-  @cpm_mod Utils.module(:cpm_quality)
+  alias ExLeiden.Utils
 
   defmodule Behaviour do
     @callback call(Source.t(), opts :: keyword()) :: Nx.Tensor.t()
@@ -154,8 +151,8 @@ defmodule ExLeiden.Leiden.LocalMove do
 
   defp quality_module(opts) do
     case Keyword.fetch!(opts, :quality_function) do
-      :modularity -> @modularity_mod
-      :cpm -> @cpm_mod
+      :modularity -> Utils.module(:modularity_quality)
+      :cpm -> Utils.module(:cpm_quality)
     end
   end
 

@@ -1,13 +1,7 @@
 defmodule ExLeidenTest do
   use ExUnit.Case, async: true
   import Hammox
-
-  require ExLeiden.Utils, as: Utils
-
-  # Get the modules that will be mocked using Utils.module
-  @option_mock Utils.module(:option)
-  @source_mock Utils.module(:source)
-  @leiden_mock Utils.module(:leiden)
+  alias ExLeiden.Utils
 
   setup :verify_on_exit!
 
@@ -34,17 +28,17 @@ defmodule ExLeidenTest do
       }
 
       # Set up expectations for the mock calls
-      expect(@option_mock, :validate_opts, fn received_opts ->
+      expect(Utils.module(:option), :validate_opts, fn received_opts ->
         assert received_opts == opts
         {:ok, validated_opts}
       end)
 
-      expect(@source_mock, :build!, fn received_input ->
+      expect(Utils.module(:source), :build!, fn received_input ->
         assert received_input == input
         source
       end)
 
-      expect(@leiden_mock, :call, fn received_source, received_opts ->
+      expect(Utils.module(:leiden), :call, fn received_source, received_opts ->
         assert received_source == source
         assert received_opts == validated_opts
         leiden_result
@@ -63,7 +57,7 @@ defmodule ExLeidenTest do
 
       validation_error = {:error, %{resolution: "must be a positive number"}}
 
-      expect(@option_mock, :validate_opts, fn received_opts ->
+      expect(Utils.module(:option), :validate_opts, fn received_opts ->
         assert received_opts == opts
         validation_error
       end)

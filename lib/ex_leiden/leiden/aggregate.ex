@@ -1,8 +1,6 @@
 defmodule ExLeiden.Leiden.Aggregate do
-  require ExLeiden.Utils, as: Utils
+  alias ExLeiden.Utils
   alias ExLeiden.Source
-
-  @source_mod Utils.module(:source)
 
   defmodule Behaviour do
     @callback call(Nx.Tensor.t(), Nx.Tensor.t()) :: Source.t()
@@ -67,6 +65,6 @@ defmodule ExLeiden.Leiden.Aggregate do
 
     # Set diagonal to 0: keep only inter-community edges
     new_adjacency_matrix = Nx.select(diagonal_mask, 0, aggregate_matrix)
-    @source_mod.build!(new_adjacency_matrix)
+    Utils.module(:source).build!(new_adjacency_matrix)
   end
 end

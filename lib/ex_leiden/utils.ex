@@ -8,11 +8,20 @@ defmodule ExLeiden.Utils do
     |> Enum.map(fn {value, _} -> value end)
   end
 
-  defmacro module(key) do
-    quote do
-      :ex_leiden
-      |> Application.compile_env!(:mocks)
-      |> Keyword.fetch!(unquote(key))
-    end
+  @default_modules [
+    leiden: ExLeiden.Leiden,
+    option: ExLeiden.Option,
+    source: ExLeiden.Source,
+    local_move: ExLeiden.Leiden.LocalMove,
+    refine_partition: ExLeiden.Leiden.RefinePartition,
+    aggregate: ExLeiden.Leiden.Aggregate,
+    modularity_quality: ExLeiden.Quality.Modularity,
+    cpm_quality: ExLeiden.Quality.CPM
+  ]
+
+  def module(key) do
+    :ex_leiden
+    |> Application.get_env(:mocks, [])
+    |> Keyword.get(key, @default_modules[key])
   end
 end
