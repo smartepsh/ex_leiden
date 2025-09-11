@@ -4,7 +4,8 @@ defmodule ExLeiden.Leiden do
 
   defmodule Behaviour do
     @type community_assignment :: %{id: integer(), children: [integer()]}
-    @type bridge_connection :: %{community_a: integer(), community_b: integer(), weight: float()}
+    @type bridge_connection ::
+            {community_a :: integer(), community_b :: integer(), weight :: number()}
     @type level_results :: %{
             communities: [community_assignment()],
             bridges: [bridge_connection()]
@@ -111,7 +112,7 @@ defmodule ExLeiden.Leiden do
         |> Enum.with_index()
         |> Enum.filter(fn {weight, _j} -> weight > 0 end)
         |> Enum.map(fn {weight, j} ->
-          %{community_a: i, community_b: j, weight: weight}
+          {i, j, weight}
         end)
       end)
     end

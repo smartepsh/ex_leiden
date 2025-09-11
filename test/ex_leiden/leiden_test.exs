@@ -243,7 +243,7 @@ defmodule ExLeiden.LeidenTest do
       assert %{
                1 => %{
                  communities: communities,
-                 bridges: [%{community_a: 0, community_b: 1, weight: 1.0}]
+                 bridges: [{0, 1, 1.0}]
                }
              } = result
 
@@ -331,8 +331,8 @@ defmodule ExLeiden.LeidenTest do
 
       # Verify multiple bridges were extracted correctly (only upper triangle)
       expected_bridges = [
-        %{community_a: 0, community_b: 1, weight: 2.0},
-        %{community_a: 0, community_b: 2, weight: 1.5}
+        {0, 1, 2.0},
+        {0, 2, 1.5}
       ]
 
       expected_communities = [
@@ -342,7 +342,7 @@ defmodule ExLeiden.LeidenTest do
       ]
 
       assert %{1 => %{communities: communities, bridges: bridges}} = result
-      assert ^expected_bridges = Enum.sort_by(bridges, &{&1.community_a, &1.community_b})
+      assert ^expected_bridges = Enum.sort_by(bridges, &{elem(&1, 0), elem(&1, 1)})
       assert ^expected_communities = Enum.sort_by(communities, & &1.id)
     end
   end
