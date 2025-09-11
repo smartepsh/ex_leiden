@@ -6,6 +6,8 @@ config :ex_leiden, :mocks,
   option: ExLeiden.Option,
   source: ExLeiden.Source,
   local_move: ExLeiden.Leiden.LocalMove,
+  refine_partition: ExLeiden.Leiden.RefinePartition,
+  aggregate: ExLeiden.Leiden.Aggregate,
   modularity_quality: ExLeiden.Quality.Modularity,
   cpm_quality: ExLeiden.Quality.CPM
 

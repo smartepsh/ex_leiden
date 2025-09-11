@@ -6,6 +6,8 @@ config :ex_leiden, :mocks,
   option: ExLeiden.OptionMock,
   source: ExLeiden.SourceMock,
   local_move: ExLeiden.Leiden.LocalMoveMock,
+  refine_partition: ExLeiden.Leiden.RefinePartitionMock,
+  aggregate: ExLeiden.Leiden.AggregateMock,
   # no mock about quality module
   modularity_quality: ExLeiden.Quality.Modularity,
   cpm_quality: ExLeiden.Quality.CPM

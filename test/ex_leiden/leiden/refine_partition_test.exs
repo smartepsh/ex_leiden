@@ -2,6 +2,13 @@ defmodule ExLeiden.Leiden.RefinePartitionTest do
   use ExUnit.Case, async: true
   alias ExLeiden.Leiden.RefinePartition
 
+  setup do
+    # Use real quality modules for integration testing
+    Mox.stub_with(ExLeiden.Quality.ModularityMock, ExLeiden.Quality.Modularity)
+    Mox.stub_with(ExLeiden.Quality.CPMMock, ExLeiden.Quality.CPM)
+    :ok
+  end
+
   describe "call/3" do
     test "refines singleton partition correctly" do
       # Simple 3-node triangle graph
