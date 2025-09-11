@@ -20,7 +20,7 @@ defmodule ExLeidenTest do
         quality_function: :modularity,
         resolution: 1.5,
         max_level: 5,
-        format: :communities_and_bridges
+        theta: 0.01
       ]
 
       source = %ExLeiden.Source{

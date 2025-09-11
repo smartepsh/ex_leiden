@@ -7,7 +7,6 @@ defmodule ExLeiden.Option do
           resolution: number(),
           quality_function: :modularity | :cpm,
           max_level: pos_integer(),
-          format: :graph | :communities_and_bridges,
           theta: number()
         ]
 
@@ -21,7 +20,6 @@ defmodule ExLeiden.Option do
     resolution: 1,
     quality_function: :modularity,
     max_level: 5,
-    format: :communities_and_bridges,
     theta: 0.01
   ]
 
@@ -33,13 +31,10 @@ defmodule ExLeiden.Option do
   ## Examples
 
       iex> ExLeiden.Option.validate_opts([])
-      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, format: :communities_and_bridges, theta: 0.01]}
+      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: 2.5, quality_function: :cpm})
-      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, format: :communities_and_bridges, theta: 0.01]}
-
-      iex> ExLeiden.Option.validate_opts(%{format: :graph})
-      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, format: :graph, theta: 0.01]}
+      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: -1.0})
       {:error, %{resolution: "must be a positive number"}}
@@ -47,8 +42,6 @@ defmodule ExLeiden.Option do
       iex> ExLeiden.Option.validate_opts(%{max_level: 0, quality_function: :invalid})
       {:error, %{max_level: "must be a positive integer", quality_function: "must be :modularity or :cpm"}}
 
-      iex> ExLeiden.Option.validate_opts(%{format: :invalid})
-      {:error, %{format: "must be :graph or :communities_and_bridges"}}
 
   """
   @impl true
@@ -108,14 +101,6 @@ defmodule ExLeiden.Option do
 
   defp validate_option(:quality_function, _value) do
     {:error, "must be :modularity or :cpm"}
-  end
-
-  defp validate_option(:format, value) when value in [:graph, :communities_and_bridges] do
-    :ok
-  end
-
-  defp validate_option(:format, _value) do
-    {:error, "must be :graph or :communities_and_bridges"}
   end
 
   defp validate_option(:theta, value) when is_number(value) and value > 0 do

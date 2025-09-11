@@ -9,7 +9,6 @@ defmodule ExLeiden.OptionTest do
       assert options[:resolution] == 1
       assert options[:quality_function] == :modularity
       assert options[:max_level] == 5
-      assert options[:format] == :communities_and_bridges
       assert options[:theta] == 0.01
     end
 
@@ -18,7 +17,6 @@ defmodule ExLeiden.OptionTest do
       assert options[:resolution] == 1
       assert options[:quality_function] == :modularity
       assert options[:max_level] == 5
-      assert options[:format] == :communities_and_bridges
       assert options[:theta] == 0.01
     end
 
