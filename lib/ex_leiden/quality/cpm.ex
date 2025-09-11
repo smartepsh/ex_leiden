@@ -100,6 +100,7 @@ defmodule ExLeiden.Quality.CPM do
           total_edges :: number(),
           opts :: keyword
         ) :: Nx.Tensor.t()
+  @impl true
   def delta_gains(adjacency_matrix, node_index, partition_matrix, _total_edges, opts) do
     resolution = Keyword.fetch!(opts, :resolution)
 

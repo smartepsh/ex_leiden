@@ -148,8 +148,8 @@ defmodule ExLeiden.OptionTest do
       assert {:error, %{theta: "must be a positive number"}} =
                Option.validate_opts(%{theta: "invalid"})
 
-      assert {:error, %{theta: "must be a positive number"}} =
-               Option.validate_opts(%{theta: nil})
+      assert {:ok, options} = Option.validate_opts(%{theta: nil})
+      assert options[:theta] == 0.01
     end
 
     test "handles multiple validation errors including theta" do

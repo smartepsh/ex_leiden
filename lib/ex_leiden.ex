@@ -67,9 +67,12 @@ defmodule ExLeiden do
   @spec call(input(), keyword() | map()) :: {:ok, result()} | {:error, map()}
   def call(input, opts \\ []) do
     with {:ok, validated_opts} <- @option_mod.validate_opts(opts) do
-      input
-      |> @source_mod.build!()
-      |> @leiden_mod.call(validated_opts)
+      result =
+        input
+        |> @source_mod.build!()
+        |> @leiden_mod.call(validated_opts)
+
+      {:ok, result}
     end
   end
 end

@@ -29,7 +29,9 @@ defmodule ExLeidenTest do
         orphan_communities: []
       }
 
-      leiden_result = {:ok, %{communities: %{a: 0, b: 0, c: 1}}}
+      leiden_result = %{
+        1 => %{communities: [%{id: 0, children: [0, 1]}, %{id: 1, children: [2]}], bridges: []}
+      }
 
       # Set up expectations for the mock calls
       expect(@option_mock, :validate_opts, fn received_opts ->
@@ -52,7 +54,7 @@ defmodule ExLeidenTest do
       result = ExLeiden.call(input, opts)
 
       # Assert the result
-      assert result == leiden_result
+      assert result == {:ok, leiden_result}
     end
 
     test "handles option validation errors" do

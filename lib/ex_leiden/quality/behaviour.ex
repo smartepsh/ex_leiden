@@ -43,4 +43,40 @@ defmodule ExLeiden.Quality.Behaviour do
               total_edges :: number(),
               opts :: keyword()
             ) :: {best_community :: non_neg_integer(), best_delta :: float()}
+
+  @doc """
+  Calculate quality delta gains for moving a node from current community to all communities.
+
+  This function calculates the complete quality delta for moving a node to each community,
+  returning a tensor of deltas for all possible moves.
+
+  ## Parameters
+
+    - `adjacency_matrix` - The adjacency matrix of the graph (n x n tensor)
+    - `node_index` - Index of the node to calculate deltas for
+    - `community_matrix` - Current community assignment matrix (n x c binary matrix)
+    - `total_edges` - Total edge weight in the graph (scalar)
+    - `opts` - Options including quality function specific parameters
+
+  ## Returns
+
+    A tensor of quality deltas for each community (c-dimensional tensor)
+
+  ## Examples
+
+      iex> deltas = QualityModule.delta_gains(adjacency, 0, community_matrix, 2.0, [resolution: 1.0])
+      iex> deltas
+      #Nx.Tensor<
+        f32[3]
+        [0.0, 0.125, -0.05]
+      >
+
+  """
+  @callback delta_gains(
+              adjacency_matrix :: Nx.Tensor.t(),
+              node_index :: non_neg_integer(),
+              community_matrix :: Nx.Tensor.t(),
+              total_edges :: number(),
+              opts :: keyword()
+            ) :: Nx.Tensor.t()
 end

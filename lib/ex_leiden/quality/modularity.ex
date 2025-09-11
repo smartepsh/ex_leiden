@@ -74,6 +74,7 @@ defmodule ExLeiden.Quality.Modularity do
     {best_community, best_delta_q}
   end
 
+  @impl true
   def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts) do
     resolution = Keyword.fetch!(opts, :resolution)
 
