@@ -7,6 +7,7 @@ defmodule ExLeiden.Option do
           resolution: number(),
           quality_function: :modularity | :cpm,
           max_level: pos_integer(),
+          community_size_threshold: pos_integer() | nil,
           theta: number()
         ]
 
@@ -20,6 +21,7 @@ defmodule ExLeiden.Option do
     resolution: 1,
     quality_function: :modularity,
     max_level: 5,
+    community_size_threshold: nil,
     theta: 0.01
   ]
 
@@ -31,10 +33,10 @@ defmodule ExLeiden.Option do
   ## Examples
 
       iex> ExLeiden.Option.validate_opts([])
-      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, theta: 0.01]}
+      {:ok, [resolution: 1, quality_function: :modularity, max_level: 5, community_size_threshold: nil, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: 2.5, quality_function: :cpm})
-      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, theta: 0.01]}
+      {:ok, [resolution: 2.5, quality_function: :cpm, max_level: 5, community_size_threshold: nil, theta: 0.01]}
 
       iex> ExLeiden.Option.validate_opts(%{resolution: -1.0})
       {:error, %{resolution: "must be a positive number"}}
@@ -101,6 +103,18 @@ defmodule ExLeiden.Option do
 
   defp validate_option(:quality_function, _value) do
     {:error, "must be :modularity or :cpm"}
+  end
+
+  defp validate_option(:community_size_threshold, nil) do
+    :ok
+  end
+
+  defp validate_option(:community_size_threshold, value) when is_integer(value) and value > 0 do
+    :ok
+  end
+
+  defp validate_option(:community_size_threshold, _value) do
+    {:error, "must be a positive integer or nil"}
   end
 
   defp validate_option(:theta, value) when is_number(value) and value > 0 do

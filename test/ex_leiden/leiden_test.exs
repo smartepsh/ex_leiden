@@ -11,7 +11,7 @@ defmodule ExLeiden.LeidenTest do
     test "calls local move and stops when all communities are singletons" do
       matrix = [[0, 1], [1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock local move returning singleton communities
       singleton_matrix = Nx.tensor([[1, 0], [0, 1]])
@@ -29,7 +29,7 @@ defmodule ExLeiden.LeidenTest do
     test "calls all phases when communities are not singletons" do
       matrix = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock non-singleton communities to trigger full pipeline
       # 2 communities: nodes {0,1} in community 0, node {2} in community 1
@@ -68,7 +68,7 @@ defmodule ExLeiden.LeidenTest do
     test "respects max_level limit" do
       matrix = [[0, 1], [1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 0, resolution: 1.0]
+      opts = [max_level: 0, resolution: 1.0, community_size_threshold: nil]
 
       # Should stop immediately without calling any modules
       result = Leiden.call(source, opts)
@@ -79,7 +79,7 @@ defmodule ExLeiden.LeidenTest do
     test "continues to next level when max_level allows" do
       matrix = [[0, 1], [1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 2, resolution: 1.0]
+      opts = [max_level: 2, resolution: 1.0, community_size_threshold: nil]
 
       # First level - non-singletons
       # Both nodes in same community
@@ -126,7 +126,13 @@ defmodule ExLeiden.LeidenTest do
     test "verifies correct parameter passing between phases" do
       matrix = [[0, 1, 0], [1, 0, 1], [0, 1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0, quality_function: :modularity]
+
+      opts = [
+        max_level: 1,
+        resolution: 1.0,
+        quality_function: :modularity,
+        community_size_threshold: nil
+      ]
 
       community_matrix = Nx.tensor([[1, 0], [0, 1], [0, 1]])
 
@@ -173,7 +179,7 @@ defmodule ExLeiden.LeidenTest do
     test "creates communities from refinement matrix correctly" do
       matrix = [[0, 1], [1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock refinement that puts both nodes in same community
       community_matrix = Nx.tensor([[1, 0], [1, 0]])
@@ -205,11 +211,85 @@ defmodule ExLeiden.LeidenTest do
     end
   end
 
+  describe "community size threshold termination" do
+    test "terminates when community size threshold is reached" do
+      matrix = [[0, 1, 0], [1, 0, 1], [0, 1, 0]]
+      source = Source.build!(matrix)
+
+      # Set threshold to 3 - should terminate immediately since we have 3 communities
+      opts = [max_level: 5, community_size_threshold: 3]
+
+      result = Leiden.call(source, opts)
+
+      # Should terminate immediately without calling any algorithm phases
+      assert result == %{}
+    end
+
+    test "continues when community size is above threshold" do
+      matrix = [[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]]
+      source = Source.build!(matrix)
+
+      # Set threshold to 2 - should continue since we have 4 communities > 2
+      opts = [max_level: 1, community_size_threshold: 2]
+
+      # Mock the algorithm phases
+      community_matrix = Nx.tensor([[1, 0], [1, 0], [0, 1], [0, 1]])
+
+      expect(ExLeiden.Leiden.LocalMoveMock, :call, fn _source, _opts ->
+        community_matrix
+      end)
+
+      expect(ExLeiden.Leiden.RefinePartitionMock, :call, fn _adj_matrix, _comm_matrix, _opts ->
+        community_matrix
+      end)
+
+      expect(ExLeiden.Leiden.AggregateMock, :call, fn _adj_matrix, _comm_matrix ->
+        # Return aggregated source with 2 communities (exactly at threshold)
+        aggregated_matrix = Nx.tensor([[0.0, 1.0], [1.0, 0.0]])
+
+        %Source{
+          adjacency_matrix: aggregated_matrix,
+          orphan_communities: [],
+          degree_sequence: [1, 1]
+        }
+      end)
+
+      result = Leiden.call(source, opts)
+
+      # Should run one level and then terminate because aggregated result has 2 communities (= threshold)
+      assert %{1 => _} = result
+    end
+
+    test "community size threshold takes precedence over max_level" do
+      matrix = [[0, 1], [1, 0]]
+      source = Source.build!(matrix)
+
+      # Set high max_level but low threshold - threshold should win
+      opts = [max_level: 10, community_size_threshold: 2]
+
+      result = Leiden.call(source, opts)
+
+      # Should terminate immediately because we have 2 communities = threshold
+      assert result == %{}
+    end
+
+    test "ignores threshold when set to nil" do
+      matrix = [[0, 1], [1, 0]]
+      source = Source.build!(matrix)
+      opts = [max_level: 0, community_size_threshold: nil]
+
+      result = Leiden.call(source, opts)
+
+      # Should respect max_level instead of threshold
+      assert result == %{}
+    end
+  end
+
   describe "bridge extraction" do
     test "extracts bridges from aggregated matrix with multiple communities" do
       matrix = [[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock to create 2 communities: {0,1} and {2,3}
       community_matrix = Nx.tensor([[1, 0], [1, 0], [0, 1], [0, 1]])
@@ -254,7 +334,7 @@ defmodule ExLeiden.LeidenTest do
     test "handles sparse matrices with no bridges" do
       matrix = [[0, 1], [1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock to create single community (no bridges possible)
       # Both nodes in same community
@@ -292,7 +372,7 @@ defmodule ExLeiden.LeidenTest do
     test "extracts multiple bridges from dense aggregated matrix" do
       matrix = [[0, 1, 1, 1], [1, 0, 0, 0], [1, 0, 0, 1], [1, 0, 1, 0]]
       source = Source.build!(matrix)
-      opts = [max_level: 1, resolution: 1.0]
+      opts = [max_level: 1, resolution: 1.0, community_size_threshold: nil]
 
       # Mock to create 3 communities
       community_matrix = Nx.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 1]])
