@@ -93,7 +93,8 @@ graph = Graph.new()
 # With options
 {:ok, result} = ExLeiden.call(edges, [
   resolution: 1.5,
-  quality_function: :cpm
+  quality_function: :cpm,
+  community_size_threshold: 10  # Stop when communities ≤ 10 nodes
 ])
 ```
 
@@ -115,6 +116,12 @@ The algorithm behavior can be customized using various options:
   - Controls depth of community hierarchy
   - Higher values allow more fine-grained community structure
   - Algorithm may stop early if no further improvements can be made, even before reaching max_level
+
+- `:community_size_threshold` - Minimum community size threshold for termination (default: `nil`)
+  - When set to an integer, algorithm terminates if all communities are at or below this size
+  - Takes precedence over `:max_level` when both are set
+  - Useful for stopping early when communities reach desired granularity
+  - Set to `nil` to disable (algorithm uses `:max_level` instead)
 
 ## Result Format
 
