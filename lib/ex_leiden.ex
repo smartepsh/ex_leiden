@@ -52,6 +52,10 @@ defmodule ExLeiden do
     * `:max_level` - Maximum hierarchical levels to create.
       Algorithm may stop early if no improvements possible. Defaults to `5`.
 
+    * `:community_size_threshold` - Minimum community size threshold for termination.
+      If all communities are at or below this size, the algorithm will terminate.
+      Takes precedence over `:max_level` when both are set. Defaults to `nil` (disabled).
+
   ## Returns
 
   - `{:ok, result}` - Success with community detection results and metadata

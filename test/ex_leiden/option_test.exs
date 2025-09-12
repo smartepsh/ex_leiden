@@ -9,6 +9,7 @@ defmodule ExLeiden.OptionTest do
       assert options[:resolution] == 1
       assert options[:quality_function] == :modularity
       assert options[:max_level] == 5
+      assert options[:community_size_threshold] == nil
       assert options[:theta] == 0.01
     end
 
@@ -17,6 +18,7 @@ defmodule ExLeiden.OptionTest do
       assert options[:resolution] == 1
       assert options[:quality_function] == :modularity
       assert options[:max_level] == 5
+      assert options[:community_size_threshold] == nil
       assert options[:theta] == 0.01
     end
 
@@ -85,7 +87,8 @@ defmodule ExLeiden.OptionTest do
       invalid_options = %{
         resolution: -1.0,
         quality_function: :invalid,
-        max_level: 0
+        max_level: 0,
+        community_size_threshold: -1
       }
 
       assert {:error, errors} = Option.validate_opts(invalid_options)
@@ -93,33 +96,66 @@ defmodule ExLeiden.OptionTest do
       assert errors.resolution == "must be a positive number"
       assert errors.quality_function == "must be :modularity or :cpm"
       assert errors.max_level == "must be a positive integer"
+      assert errors.community_size_threshold == "must be a positive integer or nil"
     end
 
     test "applies valid options correctly" do
       options = %{
         resolution: 2.5,
         quality_function: :cpm,
-        max_level: 10
+        max_level: 10,
+        community_size_threshold: 3
       }
 
       assert {:ok, result} = Option.validate_opts(options)
       assert result[:resolution] == 2.5
       assert result[:quality_function] == :cpm
       assert result[:max_level] == 10
+      assert result[:community_size_threshold] == 3
     end
 
     test "converts keyword list to map" do
       options = [
         resolution: 2.0,
         quality_function: :cpm,
-        max_level: 8
+        max_level: 8,
+        community_size_threshold: 2
       ]
 
       assert {:ok, result} = Option.validate_opts(options)
       assert result[:resolution] == 2.0
       assert result[:quality_function] == :cpm
       assert result[:max_level] == 8
+      assert result[:community_size_threshold] == 2
       assert result[:theta] == 0.01
+    end
+
+    test "accepts valid community_size_threshold values" do
+      assert {:ok, options} = Option.validate_opts(%{community_size_threshold: nil})
+      assert options[:community_size_threshold] == nil
+
+      assert {:ok, options} = Option.validate_opts(%{community_size_threshold: 1})
+      assert options[:community_size_threshold] == 1
+
+      assert {:ok, options} = Option.validate_opts(%{community_size_threshold: 5})
+      assert options[:community_size_threshold] == 5
+
+      assert {:ok, options} = Option.validate_opts(%{community_size_threshold: 100})
+      assert options[:community_size_threshold] == 100
+    end
+
+    test "rejects invalid community_size_threshold values" do
+      assert {:error, %{community_size_threshold: "must be a positive integer or nil"}} =
+               Option.validate_opts(%{community_size_threshold: 0})
+
+      assert {:error, %{community_size_threshold: "must be a positive integer or nil"}} =
+               Option.validate_opts(%{community_size_threshold: -5})
+
+      assert {:error, %{community_size_threshold: "must be a positive integer or nil"}} =
+               Option.validate_opts(%{community_size_threshold: 1.5})
+
+      assert {:error, %{community_size_threshold: "must be a positive integer or nil"}} =
+               Option.validate_opts(%{community_size_threshold: "invalid"})
     end
 
     test "accepts valid theta values" do
@@ -155,6 +191,7 @@ defmodule ExLeiden.OptionTest do
         resolution: -1.0,
         quality_function: :invalid,
         max_level: 0,
+        community_size_threshold: 0,
         theta: -0.1
       }
 
@@ -163,6 +200,7 @@ defmodule ExLeiden.OptionTest do
       assert errors.resolution == "must be a positive number"
       assert errors.quality_function == "must be :modularity or :cpm"
       assert errors.max_level == "must be a positive integer"
+      assert errors.community_size_threshold == "must be a positive integer or nil"
       assert errors.theta == "must be a positive number"
     end
 
@@ -171,6 +209,7 @@ defmodule ExLeiden.OptionTest do
         resolution: 2.5,
         quality_function: :cpm,
         max_level: 10,
+        community_size_threshold: 5,
         theta: 0.05
       }
 
@@ -178,6 +217,7 @@ defmodule ExLeiden.OptionTest do
       assert result[:resolution] == 2.5
       assert result[:quality_function] == :cpm
       assert result[:max_level] == 10
+      assert result[:community_size_threshold] == 5
       assert result[:theta] == 0.05
     end
   end
