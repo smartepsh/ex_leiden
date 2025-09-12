@@ -24,44 +24,50 @@ defmodule ExLeiden.Leiden do
 
   # Run Leiden algorithm across levels
   defp do_call(%Source{} = source, opts, current_level \\ 1, results \\ %{}) do
-    max_level = Keyword.fetch!(opts, :max_level)
-
-    if current_level > max_level do
-      results
-    else
-      # Step 1: Local moving phase
-      community_matrix_after_local = Utils.module(:local_move).call(source, opts)
-
-      # Check for convergence - if all communities are singletons, no more improvement possible
-      if all_communities_are_singletons?(community_matrix_after_local) do
+    cond do
+      # Check community size threshold first (takes precedence over max_level)
+      should_terminate_by_community_size?(source, opts) ->
         results
-      else
-        # Step 2: Refinement phase
-        refined_community_matrix =
-          Utils.module(:refine_partition).call(
-            source.adjacency_matrix,
-            community_matrix_after_local,
-            opts
-          )
 
-        # Create communities for current level from refinement matrix
-        current_communities = create_communities_from_refinement_matrix(refined_community_matrix)
+      # Then check max_level
+      should_terminate_by_max_level?(current_level, opts) ->
+        results
 
-        # Step 3: Aggregation phase - create new source for next level
-        aggregated_source =
-          Utils.module(:aggregate).call(source.adjacency_matrix, refined_community_matrix)
+      true ->
+        # Step 1: Local moving phase
+        community_matrix_after_local = Utils.module(:local_move).call(source, opts)
 
-        # Extract bridges from aggregated adjacency matrix
-        current_bridges =
-          extract_bridges_from_aggregated_matrix(aggregated_source.adjacency_matrix)
+        # Check for convergence - if all communities are singletons, no more improvement possible
+        if all_communities_are_singletons?(community_matrix_after_local) do
+          results
+        else
+          # Step 2: Refinement phase
+          refined_community_matrix =
+            Utils.module(:refine_partition).call(
+              source.adjacency_matrix,
+              community_matrix_after_local,
+              opts
+            )
 
-        # Add current level results (communities and bridges)
-        level_results = %{communities: current_communities, bridges: current_bridges}
-        updated_results = Map.put(results, current_level, level_results)
+          # Create communities for current level from refinement matrix
+          current_communities =
+            create_communities_from_refinement_matrix(refined_community_matrix)
 
-        # Continue to next level with aggregated source
-        do_call(aggregated_source, opts, current_level + 1, updated_results)
-      end
+          # Step 3: Aggregation phase - create new source for next level
+          aggregated_source =
+            Utils.module(:aggregate).call(source.adjacency_matrix, refined_community_matrix)
+
+          # Extract bridges from aggregated adjacency matrix
+          current_bridges =
+            extract_bridges_from_aggregated_matrix(aggregated_source.adjacency_matrix)
+
+          # Add current level results (communities and bridges)
+          level_results = %{communities: current_communities, bridges: current_bridges}
+          updated_results = Map.put(results, current_level, level_results)
+
+          # Continue to next level with aggregated source
+          do_call(aggregated_source, opts, current_level + 1, updated_results)
+        end
     end
   end
 
@@ -118,6 +124,29 @@ defmodule ExLeiden.Leiden do
         end)
       end)
     end
+  end
+
+  # Check if should terminate based on community size threshold
+  defp should_terminate_by_community_size?(%Source{adjacency_matrix: adj_matrix}, opts) do
+    community_size_threshold = Keyword.fetch!(opts, :community_size_threshold)
+
+    case community_size_threshold do
+      nil ->
+        false
+
+      threshold when is_integer(threshold) ->
+        # Community size is the number of nodes in each community (the matrix dimensions)
+        {n_communities, _} = Nx.shape(adj_matrix)
+
+        # If we have communities at or below the threshold, terminate
+        n_communities <= threshold
+    end
+  end
+
+  # Check if should terminate based on max_level
+  defp should_terminate_by_max_level?(current_level, opts) do
+    max_level = Keyword.fetch!(opts, :max_level)
+    current_level > max_level
   end
 
   # Check if all communities are singletons (size 1) - means no beneficial merges found
