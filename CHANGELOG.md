@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 0.2.0 - 2025-09-12
+
 ### Added
 
 - [Option] add `community_size_threshold` option for algorithm termination control. When set, the algorithm terminates if all communities are at or below the specified size threshold. Takes precedence over `max_level` when both are set.
