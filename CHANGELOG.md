@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [Behaviour] add entrypoint behaviour module, to make user can easily setup mock to test.
+
 ### Changed
 
 - [Result] update format from map `%{communities: [community], bridges: [birdge]}` to tuple `{[community], [bridge]}`.

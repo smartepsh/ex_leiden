@@ -9,22 +9,27 @@ defmodule ExLeiden do
 
   alias ExLeiden.Utils
 
-  # Input format types
-  @type vertex() :: term()
-  @type edge() :: {vertex(), vertex()} | {vertex(), vertex(), weight :: number()}
-  @type adjacency_matrix() :: [[number()]] | Nx.Tensor.t()
+  defmodule Behaviour do
+    # Input format types
+    @type vertex() :: term()
+    @type edge() :: {vertex(), vertex()} | {vertex(), vertex(), weight :: number()}
+    @type adjacency_matrix() :: [[number()]] | Nx.Tensor.t()
 
-  # libgraph Graph struct
-  @type input() ::
-          Graph.t()
-          # List of edges: [{v1, v2}, {v1, v2, weight}, ...]
-          | [edge()]
-          # Tuple: {vertices, edges}
-          | {[vertex()], [edge()]}
-          # 2D list for adjacency matrix
-          | adjacency_matrix()
+    # libgraph Graph struct
+    @type input() ::
+            Graph.t()
+            # List of edges: [{v1, v2}, {v1, v2, weight}, ...]
+            | [edge()]
+            # Tuple: {vertices, edges}
+            | {[vertex()], [edge()]}
+            # 2D list for adjacency matrix
+            | adjacency_matrix()
 
-  @type result() :: term()
+    @callback call(input(), keyword() | map()) ::
+                {:ok, ExLeiden.Leiden.Behaviour.results()} | {:error, map()}
+  end
+
+  @behaviour Behaviour
 
   @doc """
   Detects communities in a network using the Leiden algorithm.
@@ -60,8 +65,16 @@ defmodule ExLeiden do
 
   - `{:ok, result}` - Success with community detection results and metadata
   - `{:error, reason}` - Invalid options or input validation error
+
+  ## Examples
+
+      iex> ExLeiden.call([{:a, :b}, {:b, :c}])
+      {:ok, %{1 => {[%{id: 0, children: [0, 1, 2]}], []}}}
+
+      iex> ExLeiden.call([[0, 1], [1, 0]], resolution: 0.5)
+      {:ok, %{1 => {[%{id: 0, children: [0]}, %{id: 1, children: [1]}], []}}}
   """
-  @spec call(input(), keyword() | map()) :: {:ok, result()} | {:error, map()}
+  @impl true
   def call(input, opts \\ []) do
     with {:ok, validated_opts} <- Utils.module(:option).validate_opts(opts) do
       result =
