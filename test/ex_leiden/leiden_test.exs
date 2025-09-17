@@ -57,8 +57,8 @@ defmodule ExLeiden.LeidenTest do
 
       result = Leiden.call(source, opts)
 
-      assert %{1 => %{communities: communities, bridges: bridges}} = result
-      # Community 0 has nodes [0, 1], Community 1 has node [2]  
+      assert %{1 => {communities, bridges}} = result
+      # Community 0 has nodes [0, 1], Community 1 has node [2]
       assert [%{id: 0, children: [0, 1]}, %{id: 1, children: [2]}] =
                Enum.sort_by(communities, & &1.id)
 
@@ -115,10 +115,12 @@ defmodule ExLeiden.LeidenTest do
 
       result = Leiden.call(source, opts)
 
-      assert %{1 => %{communities: communities, bridges: []}} = result
-      # Community 0 has both nodes, Community 1 is empty (from the matrix [[1,0],[1,0]])  
+      assert %{1 => {communities, bridges}} = result
+      # Community 0 has both nodes, Community 1 is empty (from the matrix [[1,0],[1,0]])
       assert [%{id: 0, children: [0, 1]}, %{id: 1, children: []}] =
                Enum.sort_by(communities, & &1.id)
+
+      assert [] = bridges
     end
   end
 
@@ -207,7 +209,7 @@ defmodule ExLeiden.LeidenTest do
 
       result = Leiden.call(source, opts)
 
-      assert %{1 => %{communities: [%{id: 0, children: [0, 1]}], bridges: []}} = result
+      assert %{1 => {[%{id: 0, children: [0, 1]}], []}} = result
     end
   end
 
@@ -320,12 +322,8 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # Verify bridges were extracted correctly
-      assert %{
-               1 => %{
-                 communities: communities,
-                 bridges: [{0, 1, 1.0}]
-               }
-             } = result
+      assert %{1 => {communities, bridges}} = result
+      assert [{0, 1, 1.0}] = bridges
 
       assert [%{id: 0, children: [0, 1]}, %{id: 1, children: [2, 3]}] =
                Enum.sort_by(communities, & &1.id)
@@ -366,7 +364,7 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # Verify no bridges extracted for single community
-      assert %{1 => %{communities: [%{id: 0, children: [0, 1]}], bridges: []}} = result
+      assert %{1 => {[%{id: 0, children: [0, 1]}], []}} = result
     end
 
     test "extracts multiple bridges from dense aggregated matrix" do
@@ -421,7 +419,7 @@ defmodule ExLeiden.LeidenTest do
         %{id: 2, children: [2, 3]}
       ]
 
-      assert %{1 => %{communities: communities, bridges: bridges}} = result
+      assert %{1 => {communities, bridges}} = result
       assert ^expected_bridges = Enum.sort_by(bridges, &{elem(&1, 0), elem(&1, 1)})
       assert ^expected_communities = Enum.sort_by(communities, & &1.id)
     end

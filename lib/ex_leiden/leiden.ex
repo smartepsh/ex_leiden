@@ -6,11 +6,7 @@ defmodule ExLeiden.Leiden do
     @type community_assignment :: %{id: integer(), children: [integer()]}
     @type bridge_connection ::
             {community_a :: integer(), community_b :: integer(), weight :: number()}
-    @type level_results :: %{
-            communities: [community_assignment()],
-            bridges: [bridge_connection()]
-          }
-
+    @type level_results :: {[community_assignment()], [bridge_connection()]}
     @type results :: %{non_neg_integer() => level_results()}
     @callback call(Source.t(), keyword()) :: results()
   end
@@ -62,7 +58,7 @@ defmodule ExLeiden.Leiden do
             extract_bridges_from_aggregated_matrix(aggregated_source.adjacency_matrix)
 
           # Add current level results (communities and bridges)
-          level_results = %{communities: current_communities, bridges: current_bridges}
+          level_results = {current_communities, current_bridges}
           updated_results = Map.put(results, current_level, level_results)
 
           # Continue to next level with aggregated source

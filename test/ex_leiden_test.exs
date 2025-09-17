@@ -24,7 +24,7 @@ defmodule ExLeidenTest do
       }
 
       leiden_result = %{
-        1 => %{communities: [%{id: 0, children: [0, 1]}, %{id: 1, children: [2]}], bridges: []}
+        1 => {[%{id: 0, children: [0, 1]}, %{id: 1, children: [2]}], []}
       }
 
       # Set up expectations for the mock calls

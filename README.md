@@ -129,23 +129,23 @@ Returns a map with integer keys (hierarchical levels) and values containing comm
 
 ```elixir
 %{
-  1 => %{
-    communities: [
+  1 => {
+    [
       %{id: 0, children: [1, 2, 3]},    # Community 0 contains nodes [1, 2, 3]
       %{id: 1, children: [4, 5]},       # Community 1 contains nodes [4, 5]
       %{id: 2, children: [6, 7, 8]}     # Community 2 contains nodes [6, 7, 8]
     ],
-    bridges: [
+    [
       {0, 1, 0.5},    # Bridge between community 0 and 1 with weight 0.5
       {1, 2, 0.3}     # Bridge between community 1 and 2 with weight 0.3
     ]
   },
-  2 => %{
-    communities: [
+  2 => {
+    [
       %{id: 0, children: [0, 1]},       # Level 2 community contains level 1 communities 0 and 1
       %{id: 1, children: [2]}           # Level 2 community contains level 1 community 2
     ],
-    bridges: [
+    [
       {0, 1, 0.2}     # Bridge between level 2 communities
     ]
   }
