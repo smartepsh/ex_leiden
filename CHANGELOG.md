@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 0.3.1 - 2025-10-09
+
 ### Fixed
 
 - [Source] fix empty edge list handling - now correctly creates adjacency matrix with all orphan vertices instead of failing with `Nx.tensor/1` error
