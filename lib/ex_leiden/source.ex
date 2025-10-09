@@ -131,15 +131,20 @@ defmodule ExLeiden.Source do
           {[[index_1, index_2], [index_2, index_1] | index_acc], [weight, weight | value_acc]}
       end)
 
+    initial_matrix =
+      if indices == [] do
+        Nx.broadcast(0, {length(vertices), length(vertices)})
+      else
+        0
+        |> Nx.broadcast({length(vertices), length(vertices)})
+        |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
+      end
+
     %{
       adjacency_matrix: matrix,
       orphan_communities: orphans,
       degree_sequence: degree_sequence
-    } =
-      0
-      |> Nx.broadcast({length(vertices), length(vertices)})
-      |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
-      |> build!()
+    } = build!(initial_matrix)
 
     %__MODULE__{
       adjacency_matrix: matrix,
@@ -181,15 +186,20 @@ defmodule ExLeiden.Source do
           end
       end)
 
+    initial_matrix =
+      if indices == [] do
+        Nx.broadcast(0, {length(vertices), length(vertices)})
+      else
+        0
+        |> Nx.broadcast({length(vertices), length(vertices)})
+        |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
+      end
+
     %{
       adjacency_matrix: matrix,
       orphan_communities: orphans,
       degree_sequence: degree_sequence
-    } =
-      0
-      |> Nx.broadcast({length(vertices), length(vertices)})
-      |> Nx.indexed_add(Nx.tensor(indices), Nx.tensor(values))
-      |> build!()
+    } = build!(initial_matrix)
 
     %__MODULE__{
       adjacency_matrix: matrix,
@@ -266,11 +276,13 @@ defmodule ExLeiden.Source do
     |> Enum.map(fn {_is_orphan, index} -> index end)
   end
 
+  defp remove_orphans(matrix, []), do: matrix
+
   defp remove_orphans(matrix, kept_index) do
-    kept_index = Nx.tensor(kept_index)
+    kept_index_tensor = Nx.tensor(kept_index)
 
     matrix
-    |> Nx.take(kept_index, axis: 0)
-    |> Nx.take(kept_index, axis: 1)
+    |> Nx.take(kept_index_tensor, axis: 0)
+    |> Nx.take(kept_index_tensor, axis: 1)
   end
 end

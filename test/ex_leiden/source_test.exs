@@ -488,20 +488,38 @@ defmodule ExLeiden.SourceTest do
       # No vertices match
       edges = [{:x, :y}, {:p, :q, 5}, {:m, :n}]
 
-      # All edges ignored, results in empty indices list which fails Nx.tensor creation
-      assert_raise ArgumentError, "invalid value given to Nx.tensor/1, got: []", fn ->
-        Source.build!({vertices, edges})
-      end
+      # All edges ignored, results in all orphans
+      expected_matrix =
+        Nx.tensor([
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [:a, :b, :c],
+               degree_sequence: []
+             } = Source.build!({vertices, edges})
     end
 
     test "with empty edges list" do
       vertices = [:a, :b, :c]
       edges = []
 
-      # Empty edges list results in empty indices which fails Nx.tensor creation
-      assert_raise ArgumentError, "invalid value given to Nx.tensor/1, got: []", fn ->
-        Source.build!({vertices, edges})
-      end
+      # Empty edges list results in all orphans
+      expected_matrix =
+        Nx.tensor([
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ])
+
+      assert %Source{
+               adjacency_matrix: ^expected_matrix,
+               orphan_communities: [:a, :b, :c],
+               degree_sequence: []
+             } = Source.build!({vertices, edges})
     end
 
     test "with partially missing vertices in edges" do
