@@ -1,5 +1,6 @@
 defmodule ExLeiden.Quality.CPM do
   @behaviour ExLeiden.Quality.Behaviour
+  import Nx.Defn
 
   @moduledoc """
   Constant Potts Model (CPM) quality function for the Leiden algorithm.
@@ -63,7 +64,8 @@ defmodule ExLeiden.Quality.CPM do
   end
 
   def best_move(adjacency_matrix, node_index, partition_matrix, total_edges, opts) do
-    deltas = delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts)
+    resolution = Keyword.fetch!(opts, :resolution)
+    deltas = delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
 
     best_community = deltas |> Nx.argmax() |> Nx.to_number()
     best_gain = deltas[best_community] |> Nx.to_number()
@@ -98,12 +100,23 @@ defmodule ExLeiden.Quality.CPM do
           node_index :: non_neg_integer(),
           partition_matrix :: Nx.Tensor.t(),
           total_edges :: number(),
-          opts :: keyword
+          opts_or_resolution :: keyword() | number()
         ) :: Nx.Tensor.t()
   @impl true
-  def delta_gains(adjacency_matrix, node_index, partition_matrix, _total_edges, opts) do
-    resolution = Keyword.fetch!(opts, :resolution)
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts_or_resolution)
 
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts)
+      when is_list(opts) do
+    resolution = Keyword.fetch!(opts, :resolution)
+    delta_gains_impl(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+  end
+
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+      when is_number(resolution) do
+    delta_gains_impl(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+  end
+
+  defnp delta_gains_impl(adjacency_matrix, node_index, partition_matrix, _total_edges, resolution) do
     # Get node's adjacency row
     node_row = adjacency_matrix[node_index]
 

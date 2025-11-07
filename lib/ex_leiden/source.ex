@@ -1,4 +1,6 @@
 defmodule ExLeiden.Source do
+  import Nx.Defn
+
   @moduledoc """
   Internal representation of graph data for the Leiden algorithm.
 
@@ -242,45 +244,70 @@ defmodule ExLeiden.Source do
   end
 
   defp is_not_zero_diagonal?(matrix) do
+    result = check_zero_diagonal(matrix)
+    Nx.to_number(result) == 0
+  end
+
+  defnp check_zero_diagonal(matrix) do
     matrix
     |> Nx.take_diagonal()
     |> Nx.equal(0)
     |> Nx.all()
-    |> Nx.to_number()
-    |> Kernel.==(0)
   end
 
   defp are_not_all_finity_numbers?(matrix) do
-    has_inf? = matrix |> Nx.is_infinity() |> Nx.any() |> Nx.to_number() |> Kernel.==(1)
-    has_nan? = matrix |> Nx.is_nan() |> Nx.any() |> Nx.to_number() |> Kernel.==(1)
+    result = check_finite_numbers(matrix)
+    Nx.to_number(result) == 1
+  end
 
-    has_inf? or has_nan?
+  defnp check_finite_numbers(matrix) do
+    has_inf = matrix |> Nx.is_infinity() |> Nx.any()
+    has_nan = matrix |> Nx.is_nan() |> Nx.any()
+    Nx.logical_or(has_inf, has_nan)
   end
 
   defp has_neg_numbers?(matrix) do
-    matrix |> Nx.less(0) |> Nx.any() |> Nx.to_number() |> Kernel.==(1)
+    result = check_negative_numbers(matrix)
+    Nx.to_number(result) == 1
+  end
+
+  defnp check_negative_numbers(matrix) do
+    Nx.less(matrix, 0) |> Nx.any()
   end
 
   defp is_not_symmetric?(matrix) do
-    matrix |> Nx.transpose() |> Nx.all_close(matrix) |> Nx.to_number() |> Kernel.==(0)
+    result = check_symmetric(matrix)
+    Nx.to_number(result) == 0
+  end
+
+  defnp check_symmetric(matrix) do
+    Nx.all_close(Nx.transpose(matrix), matrix)
   end
 
   defp orphans(matrix) do
-    # Because this is a adjacency matrix, So, just verify with one of rows OR columns
+    orphan_mask = find_orphan_mask(matrix)
+
+    orphan_mask
+    |> Nx.to_flat_list()
+    |> Enum.with_index()
+    |> Enum.filter(fn {is_orphan, _index} -> is_orphan == 1 end)
+    |> Enum.map(fn {_is_orphan, index} -> index end)
+  end
+
+  defnp find_orphan_mask(matrix) do
     matrix
     |> Nx.sum(axes: [0])
     |> Nx.equal(0)
-    |> Nx.to_list()
-    |> Enum.with_index(0)
-    |> Enum.filter(fn {is_orphan, _index} -> is_orphan == 1 end)
-    |> Enum.map(fn {_is_orphan, index} -> index end)
   end
 
   defp remove_orphans(matrix, []), do: matrix
 
   defp remove_orphans(matrix, kept_index) do
     kept_index_tensor = Nx.tensor(kept_index)
+    remove_orphans_defn(matrix, kept_index_tensor)
+  end
 
+  defnp remove_orphans_defn(matrix, kept_index_tensor) do
     matrix
     |> Nx.take(kept_index_tensor, axis: 0)
     |> Nx.take(kept_index_tensor, axis: 1)

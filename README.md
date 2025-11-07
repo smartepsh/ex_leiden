@@ -22,6 +22,25 @@ def deps do
 end
 ```
 
+### Configuration
+
+ExLeiden leverages Nx numerical definitions (`defn`) for GPU-accelerated computation. To enable hardware acceleration, configure the EXLA backend in your application's `config/config.exs`:
+
+```elixir
+# Configure Nx to use EXLA backend
+config :nx, :default_backend, EXLA.Backend
+
+# Configure EXLA compilation options
+config :nx, :default_defn_options, [
+  compiler: EXLA,
+  client: :host  # Use :cuda or :rocm for GPU acceleration
+]
+```
+
+**Backend Configuration Options:**
+
+For GPU acceleration setup and additional client options, refer to the [EXLA documentation](https://hexdocs.pm/exla/EXLA.html#module-clients).
+
 ## Leiden Algorithm Overview
 
 The Leiden algorithm consists of three main phases:
@@ -183,6 +202,7 @@ The only source of errors is option validation. The Leiden algorithm itself cann
 - **Quality Functions**: Both main quality functions are fully implemented
   - **Modularity**: Complete vectorized implementation with resolution parameter support
   - **Constant Potts Model (CPM)**: Complete implementation with linear penalty calculation
+- **XLA Ready**: use Google's XLA backend for Nx. It support CPU accelerated or GPU accelerated
 
 ### 🚧 TODOs
 
