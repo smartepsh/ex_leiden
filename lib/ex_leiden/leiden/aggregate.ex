@@ -1,4 +1,5 @@
 defmodule ExLeiden.Leiden.Aggregate do
+  import Nx.Defn
   alias ExLeiden.Utils
   alias ExLeiden.Source
 
@@ -47,6 +48,12 @@ defmodule ExLeiden.Leiden.Aggregate do
   """
   @impl true
   def call(adjacency_matrix, partition_matrix) do
+    new_adjacency_matrix = create_aggregate_matrix(adjacency_matrix, partition_matrix)
+    Utils.module(:source).build!(new_adjacency_matrix)
+  end
+
+  # Create aggregate adjacency matrix using GPU-accelerated operations
+  defnp create_aggregate_matrix(adjacency_matrix, partition_matrix) do
     # Create aggregate adjacency matrix: C^T * A * C
     # where C is the partition matrix and A is the adjacency matrix
     aggregate_matrix =
@@ -64,7 +71,6 @@ defmodule ExLeiden.Leiden.Aggregate do
     diagonal_mask = Nx.eye(n_communities)
 
     # Set diagonal to 0: keep only inter-community edges
-    new_adjacency_matrix = Nx.select(diagonal_mask, 0, aggregate_matrix)
-    Utils.module(:source).build!(new_adjacency_matrix)
+    Nx.select(diagonal_mask, 0, aggregate_matrix)
   end
 end

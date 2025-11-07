@@ -1,4 +1,6 @@
 defmodule ExLeiden.Leiden.LocalMove do
+  import Nx.Defn
+
   @moduledoc """
   Local moving phase implementation for the Leiden algorithm.
 
@@ -101,9 +103,14 @@ defmodule ExLeiden.Leiden.LocalMove do
     # Find current community and update both positions in one operation
     current_community = Nx.argmax(community_matrix[current_node]) |> Nx.to_number()
 
+    # Create tensors outside defn
     indices = Nx.tensor([[current_node, current_community], [current_node, best_community]])
     values = Nx.tensor([0, 1])
 
+    update_community_assignment(community_matrix, indices, values)
+  end
+
+  defnp update_community_assignment(community_matrix, indices, values) do
     Nx.indexed_put(community_matrix, indices, values)
   end
 
@@ -118,6 +125,15 @@ defmodule ExLeiden.Leiden.LocalMove do
     # Find current node's new community
     target_community = Nx.argmax(community_matrix[current_node]) |> Nx.to_number()
 
+    result = find_candidate_nodes(matrix, current_node, community_matrix, target_community)
+
+    # Extract indices where mask is true
+    result
+    |> Nx.to_flat_list()
+    |> Enum.filter(fn idx -> idx >= 0 end)
+  end
+
+  defnp find_candidate_nodes(matrix, current_node, community_matrix, target_community) do
     # Get nodes in target community (column vector)
     target_community_nodes = community_matrix[[.., target_community]]
 
@@ -132,10 +148,8 @@ defmodule ExLeiden.Leiden.LocalMove do
     indices = Nx.iota({Nx.size(candidates)})
     mask = Nx.greater(candidates, 0)
 
-    # Extract indices where mask is true
+    # Return indices with -1 for non-candidates
     Nx.select(mask, indices, -1)
-    |> Nx.to_flat_list()
-    |> Enum.filter(fn idx -> idx >= 0 end)
   end
 
   # Queue management functions

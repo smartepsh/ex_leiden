@@ -1,5 +1,6 @@
 defmodule ExLeiden.Quality.Modularity do
   @behaviour ExLeiden.Quality.Behaviour
+  import Nx.Defn
 
   @moduledoc """
   Modularity quality function for the Leiden algorithm.
@@ -59,7 +60,7 @@ defmodule ExLeiden.Quality.Modularity do
   def best_move(_adjacency_matrix, node_index, partition_matrix, 0, _opts) do
     # Empty graph case - no edges, no meaningful moves possible
     # Node stays in current community with zero modularity change
-    current_community = find_current_community(partition_matrix, node_index)
+    current_community = find_current_community(partition_matrix, node_index) |> Nx.to_number()
 
     {current_community, 0.0}
   end
@@ -75,9 +76,20 @@ defmodule ExLeiden.Quality.Modularity do
   end
 
   @impl true
-  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts) do
-    resolution = Keyword.fetch!(opts, :resolution)
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts_or_resolution)
 
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, opts)
+      when is_list(opts) do
+    resolution = Keyword.fetch!(opts, :resolution)
+    delta_gains_impl(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+  end
+
+  def delta_gains(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+      when is_number(resolution) do
+    delta_gains_impl(adjacency_matrix, node_index, partition_matrix, total_edges, resolution)
+  end
+
+  defnp delta_gains_impl(adjacency_matrix, node_index, partition_matrix, total_edges, resolution) do
     # Find current community of the node
     current_community = find_current_community(partition_matrix, node_index)
 
@@ -103,42 +115,38 @@ defmodule ExLeiden.Quality.Modularity do
   end
 
   # Find which community a node currently belongs to
-  defp find_current_community(partition_matrix, node_idx) do
-    partition_matrix[node_idx]
-    |> Nx.argmax()
-    |> Nx.to_number()
+  defnp find_current_community(partition_matrix, node_idx) do
+    Nx.argmax(partition_matrix[node_idx])
   end
 
   # Calculate the degree of a specific node
-  defp calculate_node_degree(adjacency_matrix, node_idx) do
-    adjacency_matrix[node_idx]
-    |> Nx.sum()
-    |> Nx.to_number()
+  defnp calculate_node_degree(adjacency_matrix, node_idx) do
+    Nx.sum(adjacency_matrix[node_idx])
   end
 
   # Calculate edges from a node to each community
-  defp calculate_edges_to_communities(node_row, partition_matrix) do
+  defnp calculate_edges_to_communities(node_row, partition_matrix) do
     # node_row × partition_matrix = edges to each community
     # Nx handles vector-matrix multiplication automatically
     Nx.dot(node_row, partition_matrix)
   end
 
   # Calculate total degree for each community
-  defp calculate_community_degrees(adjacency_matrix, partition_matrix) do
+  defnp calculate_community_degrees(adjacency_matrix, partition_matrix) do
     adjacency_matrix
     |> Nx.sum(axes: [1])
     |> Nx.dot(partition_matrix)
   end
 
   # Calculate modularity deltas for all communities using matrix operations
-  defp calculate_all_modularity_deltas_matrix(
-         current_community,
-         node_degree,
-         edges_to_communities,
-         community_degrees,
-         total_edges,
-         resolution
-       ) do
+  defnp calculate_all_modularity_deltas_matrix(
+          current_community,
+          node_degree,
+          edges_to_communities,
+          community_degrees,
+          total_edges,
+          resolution
+        ) do
     k_i = node_degree
     k_i_in_current = edges_to_communities[current_community]
 
@@ -149,9 +157,8 @@ defmodule ExLeiden.Quality.Modularity do
     k_current = community_degrees[current_community]
     k_i_in_new = Nx.add(community_degrees, k_i)
 
-    # Convert scalars to tensors for consistent operations
-    k_current_scalar = Nx.to_number(k_current)
-    k_current_without_node = k_current_scalar - k_i
+    # Calculate k_current_without_node using tensor operations
+    k_current_without_node = Nx.subtract(k_current, k_i)
 
     # Calculate expected edge changes: γ * k_i * (K_new - K_old + k_i) / (2m)
     expected_edge_deltas =
@@ -159,21 +166,19 @@ defmodule ExLeiden.Quality.Modularity do
       # (K_new - K_old + k_i)
       |> Nx.subtract(k_current_without_node)
       # γ * k_i * (K_new - K_old + k_i)
-      |> Nx.multiply(k_i * resolution)
+      |> Nx.multiply(Nx.multiply(k_i, resolution))
       # / (2m)
-      |> Nx.divide(2 * total_edges)
+      |> Nx.divide(Nx.multiply(2, total_edges))
 
     # Final delta calculation: (1/2m) * [actual_edge_deltas - expected_edge_deltas]
     deltas =
       actual_edge_deltas
       |> Nx.subtract(expected_edge_deltas)
-      |> Nx.divide(2 * total_edges)
+      |> Nx.divide(Nx.multiply(2, total_edges))
 
-    # Create mask for current community (self-move case) - same pattern as CPM
-    current_community_tensor = Nx.tensor(current_community)
-
+    # Create mask for current community (self-move case)
     current_community_mask =
-      Nx.equal(Nx.iota({Nx.axis_size(deltas, 0)}), current_community_tensor)
+      Nx.equal(Nx.iota({Nx.axis_size(deltas, 0)}), current_community)
 
     # Set self-move delta to 0 using Nx.select (staying in same community = no change)
     Nx.select(current_community_mask, 0, deltas)

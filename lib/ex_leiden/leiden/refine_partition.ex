@@ -1,4 +1,5 @@
 defmodule ExLeiden.Leiden.RefinePartition do
+  import Nx.Defn
   alias ExLeiden.Utils
 
   defmodule Behaviour do
@@ -93,28 +94,36 @@ defmodule ExLeiden.Leiden.RefinePartition do
 
   # Get list of node indices belonging to a community
   defp get_community_nodes(community_matrix, community_idx) do
-    community_column =
-      community_matrix
-      |> Nx.slice_along_axis(community_idx, 1, axis: 1)
-      |> Nx.squeeze(axes: [1])
-
+    community_column = extract_community_column(community_matrix, community_idx)
     community_size = Nx.sum(community_column) |> Nx.to_number()
 
     # Handle empty communities
     if community_size == 0 do
       []
     else
-      Nx.argsort(community_column, direction: :desc)
+      community_column
+      |> Nx.argsort(direction: :desc)
       |> Nx.slice([0], [community_size])
-      |> Nx.to_list()
+      |> Nx.to_flat_list()
     end
+  end
+
+  defnp extract_community_column(community_matrix, community_idx) do
+    community_matrix
+    |> Nx.slice_along_axis(community_idx, 1, axis: 1)
+    |> Nx.squeeze(axes: [1])
   end
 
   # Calculate sub-matrices for each community using Stream for memory efficiency
   defp get_subset_matrix(adjacency_matrix, community_nodes) do
-    # Convert list to tensor for Nx operations
+    # Convert list to tensor for Nx operations (outside defn)
     indices = Nx.tensor(community_nodes)
 
+    # Extract submatrix using defn
+    extract_submatrix(adjacency_matrix, indices)
+  end
+
+  defnp extract_submatrix(adjacency_matrix, indices) do
     # Extract submatrix by taking rows and columns for the subset nodes
     adjacency_matrix
     # Take rows for subset nodes
@@ -125,12 +134,12 @@ defmodule ExLeiden.Leiden.RefinePartition do
 
   # Calculate well-connected communities mask based on γ-connectivity using pure matrix operations
   # A community C is well-connected to subset S if: E(C, S - C) >= γ * ||C|| * ||S - C||
-  defp calculate_well_connected_communities_mask(
-         subset_adjacency_matrix,
-         partition_matrix,
-         resolution,
-         subset_size
-       ) do
+  defnp calculate_well_connected_communities_mask(
+          subset_adjacency_matrix,
+          partition_matrix,
+          resolution,
+          subset_size
+        ) do
     # Calculate community sizes for all communities at once
     community_sizes = Nx.sum(partition_matrix, axes: [0])
 
@@ -185,7 +194,7 @@ defmodule ExLeiden.Leiden.RefinePartition do
   # Takes a gains matrix where non-negative values are valid candidates, negative are invalid
   defp select_community_with_theta(filtered_gains, opts) do
     # Create mask for valid candidates (positive or zero gains)
-    valid_mask = Nx.greater_equal(filtered_gains, 0)
+    valid_mask = create_valid_mask(filtered_gains)
 
     # Count number of valid candidates
     num_valid = Nx.sum(valid_mask) |> Nx.to_number()
@@ -201,34 +210,49 @@ defmodule ExLeiden.Leiden.RefinePartition do
         # Randomized mode: original theta-based selection
         theta = Keyword.fetch!(opts, :theta)
 
-        # Extract only valid gains for probability calculation
-        valid_gains = Nx.select(valid_mask, filtered_gains, 0)
-
-        # Calculate weights using matrix operations: exp(gain/theta) for valid gains only
-        weights =
-          valid_gains
-          |> Nx.divide(theta)
-          |> Nx.exp()
-          # Zero out invalid positions
-          |> Nx.multiply(Nx.select(valid_mask, 1.0, 0.0))
-
-        total_weight = Nx.sum(weights)
-
-        # Calculate probabilities
-        probabilities = Nx.divide(weights, total_weight)
+        # Calculate probabilities using defn
+        probabilities = calculate_theta_probabilities(filtered_gains, valid_mask, theta)
 
         # Generate random value and find selection using cumulative probability
         random_val = :rand.uniform()
 
-        # Calculate cumulative probabilities
-        cumulative_probs = Nx.cumulative_sum(probabilities, axis: 0)
-
-        # Find first index where cumulative probability >= random_val
-        selection_mask = Nx.greater_equal(cumulative_probs, random_val)
-        # Return the selected community index
-        selection_mask |> Nx.argmax() |> Nx.to_number()
+        # Calculate cumulative probabilities and find selection
+        selection_idx = find_random_selection(probabilities, random_val)
+        Nx.to_number(selection_idx)
       end
     end
+  end
+
+  defnp create_valid_mask(filtered_gains) do
+    Nx.greater_equal(filtered_gains, 0)
+  end
+
+  defnp calculate_theta_probabilities(filtered_gains, valid_mask, theta) do
+    # Extract only valid gains for probability calculation
+    valid_gains = Nx.select(valid_mask, filtered_gains, 0)
+
+    # Calculate weights using matrix operations: exp(gain/theta) for valid gains only
+    weights =
+      valid_gains
+      |> Nx.divide(theta)
+      |> Nx.exp()
+      # Zero out invalid positions
+      |> Nx.multiply(Nx.select(valid_mask, 1.0, 0.0))
+
+    total_weight = Nx.sum(weights)
+
+    # Calculate probabilities
+    Nx.divide(weights, total_weight)
+  end
+
+  defnp find_random_selection(probabilities, random_val) do
+    # Calculate cumulative probabilities
+    cumulative_probs = Nx.cumulative_sum(probabilities, axis: 0)
+
+    # Find first index where cumulative probability >= random_val
+    selection_mask = Nx.greater_equal(cumulative_probs, random_val)
+    # Return the selected community index
+    Nx.argmax(selection_mask)
   end
 
   # Build final partition matrix using subset mappings and single Nx.indexed_add
@@ -295,10 +319,10 @@ defmodule ExLeiden.Leiden.RefinePartition do
   # Remove empty communities (columns that are all zeros) using matrix operations
   defp remove_empty_communities(partition_matrix) do
     # Calculate community sizes (sum of each column)
-    community_sizes = Nx.sum(partition_matrix, axes: [0])
+    community_sizes = calculate_community_sizes(partition_matrix)
 
     # Create mask for non-empty communities (size > 0)
-    non_empty_mask = Nx.greater(community_sizes, 0)
+    non_empty_mask = create_non_empty_mask(community_sizes)
 
     # Count non-empty communities
     n_non_empty = Nx.sum(non_empty_mask) |> Nx.to_number()
@@ -317,8 +341,20 @@ defmodule ExLeiden.Leiden.RefinePartition do
         |> Nx.slice([0], [n_non_empty])
 
       # Take only the non-empty community columns
-      Nx.take(partition_matrix, non_empty_indices, axis: 1)
+      take_non_empty_communities(partition_matrix, non_empty_indices)
     end
+  end
+
+  defnp calculate_community_sizes(partition_matrix) do
+    Nx.sum(partition_matrix, axes: [0])
+  end
+
+  defnp create_non_empty_mask(community_sizes) do
+    Nx.greater(community_sizes, 0)
+  end
+
+  defnp take_non_empty_communities(partition_matrix, non_empty_indices) do
+    Nx.take(partition_matrix, non_empty_indices, axis: 1)
   end
 
   # Process refinement moves - one round iteration as per Algorithm A.2
@@ -379,27 +415,32 @@ defmodule ExLeiden.Leiden.RefinePartition do
 
   # Check if a node is currently in a singleton community
   defp is_node_in_singleton_community?(partition_matrix, node_idx) do
+    result = check_singleton_community(partition_matrix, node_idx)
+    Nx.to_number(result) == 1
+  end
+
+  defnp check_singleton_community(partition_matrix, node_idx) do
     # Get the community index of the node
-    community_idx = Nx.argmax(partition_matrix[node_idx]) |> Nx.to_number()
+    community_idx = Nx.argmax(partition_matrix[node_idx])
 
-    # Calculate the size of that community
-    community_size =
-      partition_matrix[[.., community_idx]]
-      |> Nx.sum()
-      |> Nx.to_number()
-
-    community_size == 1
+    # Calculate the size of that community and check if it's 1
+    partition_matrix[[.., community_idx]]
+    |> Nx.sum()
+    |> Nx.equal(1)
   end
 
   # Apply a single move (merge node into target community)
   defp apply_single_move(partition_matrix, node_idx, target_community_idx) do
-    # Get current community index
     current_community_idx = Nx.argmax(partition_matrix[node_idx]) |> Nx.to_number()
 
-    # Clear old assignment and set new assignment
+    # Create tensors outside defn
     updates = Nx.tensor([[node_idx, current_community_idx], [node_idx, target_community_idx]])
     values = Nx.tensor([0, 1])
 
+    apply_move_update(partition_matrix, updates, values)
+  end
+
+  defnp apply_move_update(partition_matrix, updates, values) do
     Nx.indexed_put(partition_matrix, updates, values)
   end
 
@@ -418,11 +459,19 @@ defmodule ExLeiden.Leiden.RefinePartition do
         :modularity -> Utils.module(:modularity_quality)
       end
 
-    module.delta_gains(subset_adjacency_matrix, node_idx, partition_matrix, total_edges, opts)
+    resolution = Keyword.fetch!(opts, :resolution)
+
+    module.delta_gains(
+      subset_adjacency_matrix,
+      node_idx,
+      partition_matrix,
+      total_edges,
+      resolution
+    )
   end
 
   # Filter quality gains to only include well-connected communities with non-negative gains
-  defp filter_gains_by_well_connectivity(all_quality_gains, well_connected_mask) do
+  defnp filter_gains_by_well_connectivity(all_quality_gains, well_connected_mask) do
     # Create mask for non-negative gains
     non_negative_gains_mask = Nx.greater_equal(all_quality_gains, 0)
 
