@@ -1,5 +1,8 @@
 import Config
 
+# config :nx, :default_backend, EXLA.Backend
+# config :nx, :default_defn_options, compiler: EXLA, client: :host
+
 # Configuration for mocking modules during testing
 config :ex_leiden, :mocks,
   leiden: ExLeiden.Leiden,
