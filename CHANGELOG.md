@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **[BREAKING]** [Result] Return format now includes source adjacency matrix alongside results. The public API `ExLeiden.call/2` now returns `{:ok, %{source: Source.t(), result: results_map}}` instead of `{:ok, results_map}`. This enables users to access the exact adjacency matrix used for computation alongside the community detection results.
+
 ## 0.4.1 - 2025-11-26
 
 ### Fixed

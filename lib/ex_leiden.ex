@@ -7,6 +7,7 @@ defmodule ExLeiden do
   See the [README](README.md) for detailed documentation, usage examples, and algorithm overview.
   """
 
+  alias ExLeiden.Source
   alias ExLeiden.Utils
 
   defmodule Behaviour do
@@ -26,7 +27,8 @@ defmodule ExLeiden do
             | adjacency_matrix()
 
     @callback call(input(), keyword() | map()) ::
-                {:ok, ExLeiden.Leiden.Behaviour.results()} | {:error, map()}
+                {:ok, %{source: Source.t(), result: ExLeiden.Leiden.Behaviour.results()}}
+                | {:error, map()}
   end
 
   @behaviour Behaviour
@@ -68,21 +70,23 @@ defmodule ExLeiden do
 
   ## Examples
 
-      iex> ExLeiden.call([{:a, :b}, {:b, :c}])
-      {:ok, %{1 => {[%{id: 0, children: [0, 1, 2]}], []}}}
+      iex> {:ok, %{result: result}} = ExLeiden.call([{:a, :b}, {:b, :c}])
+      iex> result
+      %{1 => {[%{id: 0, children: [0, 1, 2]}], []}}
 
-      iex> ExLeiden.call([[0, 1], [1, 0]], resolution: 0.5)
-      {:ok, %{1 => {[%{id: 0, children: [0]}, %{id: 1, children: [1]}], []}}}
+      iex> {:ok, %{result: result}} = ExLeiden.call([[0, 1], [1, 0]], resolution: 0.5)
+      iex> result
+      %{1 => {[%{id: 0, children: [0]}, %{id: 1, children: [1]}], []}}
   """
   @impl true
   def call(input, opts \\ []) do
     with {:ok, validated_opts} <- Utils.module(:option).validate_opts(opts) do
-      result =
+      %{source: source, result: result} =
         input
         |> Utils.module(:source).build!()
         |> Utils.module(:leiden).call(validated_opts)
 
-      {:ok, result}
+      {:ok, %{source: source, result: result}}
     end
   end
 end

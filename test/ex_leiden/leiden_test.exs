@@ -23,7 +23,7 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # When all communities are singletons, algorithm stops early
-      assert result == %{}
+      assert result == %{source: source, result: %{}}
     end
 
     test "calls all phases when communities are not singletons" do
@@ -55,7 +55,7 @@ defmodule ExLeiden.LeidenTest do
         }
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       assert %{1 => {communities, bridges}} = result
       # Community 0 has nodes [0, 1], Community 1 has node [2]
@@ -73,7 +73,7 @@ defmodule ExLeiden.LeidenTest do
       # Should stop immediately without calling any modules
       result = Leiden.call(source, opts)
 
-      assert result == %{}
+      assert result == %{source: source, result: %{}}
     end
 
     test "continues to next level when max_level allows" do
@@ -113,7 +113,7 @@ defmodule ExLeiden.LeidenTest do
         aggregated_source
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       assert %{1 => {communities, bridges}} = result
       # Community 0 has both nodes, Community 1 is empty (from the matrix [[1,0],[1,0]])
@@ -171,7 +171,7 @@ defmodule ExLeiden.LeidenTest do
         }
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       assert is_map(result)
       # When no phases run due to parameter passing test, result should be empty
@@ -207,7 +207,7 @@ defmodule ExLeiden.LeidenTest do
         }
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       assert %{1 => {[%{id: 0, children: [0, 1]}], []}} = result
     end
@@ -224,7 +224,7 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # Should terminate immediately without calling any algorithm phases
-      assert result == %{}
+      assert result == %{source: source, result: %{}}
     end
 
     test "continues when community size is above threshold" do
@@ -256,7 +256,7 @@ defmodule ExLeiden.LeidenTest do
         }
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       # Should run one level and then terminate because aggregated result has 2 communities (= threshold)
       assert %{1 => _} = result
@@ -272,7 +272,7 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # Should terminate immediately because we have 2 communities = threshold
-      assert result == %{}
+      assert result == %{source: source, result: %{}}
     end
 
     test "ignores threshold when set to nil" do
@@ -283,7 +283,7 @@ defmodule ExLeiden.LeidenTest do
       result = Leiden.call(source, opts)
 
       # Should respect max_level instead of threshold
-      assert result == %{}
+      assert result == %{source: source, result: %{}}
     end
   end
 
@@ -319,7 +319,7 @@ defmodule ExLeiden.LeidenTest do
         aggregated_source
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       # Verify bridges were extracted correctly
       assert %{1 => {communities, bridges}} = result
@@ -361,7 +361,7 @@ defmodule ExLeiden.LeidenTest do
         aggregated_source
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       # Verify no bridges extracted for single community
       assert %{1 => {[%{id: 0, children: [0, 1]}], []}} = result
@@ -405,7 +405,7 @@ defmodule ExLeiden.LeidenTest do
         aggregated_source
       end)
 
-      result = Leiden.call(source, opts)
+      %{source: _source, result: result} = Leiden.call(source, opts)
 
       # Verify multiple bridges were extracted correctly (only upper triangle)
       expected_bridges = [

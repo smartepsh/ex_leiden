@@ -41,14 +41,14 @@ defmodule ExLeidenTest do
       expect(Utils.module(:leiden), :call, fn received_source, received_opts ->
         assert received_source == source
         assert received_opts == validated_opts
-        leiden_result
+        %{source: source, result: leiden_result}
       end)
 
       # Call the function
       result = ExLeiden.call(input, opts)
 
       # Assert the result
-      assert result == {:ok, leiden_result}
+      assert result == {:ok, %{source: source, result: leiden_result}}
     end
 
     test "handles option validation errors" do

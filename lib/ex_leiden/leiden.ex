@@ -9,14 +9,15 @@ defmodule ExLeiden.Leiden do
             {community_a :: integer(), community_b :: integer(), weight :: number()}
     @type level_results :: {[community_assignment()], [bridge_connection()]}
     @type results :: %{non_neg_integer() => level_results()}
-    @callback call(Source.t(), keyword()) :: results()
+    @callback call(Source.t(), keyword()) :: %{source: Source.t(), result: results()}
   end
 
   @behaviour Behaviour
 
   @impl true
   def call(%Source{} = source, opts \\ []) do
-    do_call(source, opts)
+    result = do_call(source, opts)
+    %{source: source, result: result}
   end
 
   # Run Leiden algorithm across levels

@@ -80,16 +80,16 @@ ExLeiden accepts graphs in multiple formats and converts them internally to adja
 ```elixir
 # From edge list (unweighted)
 edges = [{1, 2}, {2, 3}, {3, 1}]
-{:ok, result} = ExLeiden.call(edges)
+{:ok, %{source: source, result: result}} = ExLeiden.call(edges)
 
 # From edge list (weighted)
 weighted_edges = [{:a, :b, 0.5}, {:b, :c, 1.2}, {:c, :a, 0.8}]
-{:ok, result} = ExLeiden.call(weighted_edges)
+{:ok, %{source: _source, result: result}} = ExLeiden.call(weighted_edges)
 
 # From explicit vertices and edges
 vertices = ["alice", "bob", "carol"]
 edges = [{"alice", "bob"}, {"bob", "carol"}]
-{:ok, result} = ExLeiden.call({vertices, edges})
+{:ok, %{source: _source, result: result}} = ExLeiden.call({vertices, edges})
 
 # From adjacency matrix (2D list)
 matrix = [
@@ -97,20 +97,20 @@ matrix = [
   [1, 0, 1],
   [1, 1, 0]
 ]
-{:ok, result} = ExLeiden.call(matrix)
+{:ok, %{source: _source, result: result}} = ExLeiden.call(matrix)
 
 # From Nx tensor adjacency matrix
 tensor = Nx.tensor([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
-{:ok, result} = ExLeiden.call(tensor)
+{:ok, %{source: _source, result: result}} = ExLeiden.call(tensor)
 
 # From libgraph Graph struct
 graph = Graph.new()
         |> Graph.add_vertices([1, 2, 3])
         |> Graph.add_edges([{1, 2}, {2, 3}])
-{:ok, result} = ExLeiden.call(graph)
+{:ok, %{source: _source, result: result}} = ExLeiden.call(graph)
 
 # With options
-{:ok, result} = ExLeiden.call(edges, [
+{:ok, %{source: _source, result: result}} = ExLeiden.call(edges, [
   resolution: 1.5,
   quality_function: :cpm,
   community_size_threshold: 10  # Stop when communities ≤ 10 nodes
@@ -144,40 +144,55 @@ The algorithm behavior can be customized using various options:
 
 ## Result Format
 
-Returns a map with integer keys (hierarchical levels) and values containing communities and bridges:
+Returns `{:ok, result}` where result is a map containing:
+
+- `:source` - The `%ExLeiden.Source{}` struct with the adjacency matrix used for computation
+- `:result` - A map with integer keys (hierarchical levels) containing communities and bridges
+
+### Complete Result Structure
 
 ```elixir
-%{
-  1 => {
-    [
-      %{id: 0, children: [1, 2, 3]},    # Community 0 contains nodes [1, 2, 3]
-      %{id: 1, children: [4, 5]},       # Community 1 contains nodes [4, 5]
-      %{id: 2, children: [6, 7, 8]}     # Community 2 contains nodes [6, 7, 8]
-    ],
-    [
-      {0, 1, 0.5},    # Bridge between community 0 and 1 with weight 0.5
-      {1, 2, 0.3}     # Bridge between community 1 and 2 with weight 0.3
-    ]
+{:ok, %{
+  source: %ExLeiden.Source{
+    adjacency_matrix: #Nx.Tensor<...>,
+    # ... other source fields
   },
-  2 => {
-    [
-      %{id: 0, children: [0, 1]},       # Level 2 community contains level 1 communities 0 and 1
-      %{id: 1, children: [2]}           # Level 2 community contains level 1 community 2
-    ],
-    [
-      {0, 1, 0.2}     # Bridge between level 2 communities
-    ]
+  result: %{
+    1 => {
+      [
+        %{id: 0, children: [1, 2, 3]},    # Community 0 contains nodes [1, 2, 3]
+        %{id: 1, children: [4, 5]},       # Community 1 contains nodes [4, 5]
+        %{id: 2, children: [6, 7, 8]}     # Community 2 contains nodes [6, 7, 8]
+      ],
+      [
+        {0, 1, 0.5},    # Bridge between community 0 and 1 with weight 0.5
+        {1, 2, 0.3}     # Bridge between community 1 and 2 with weight 0.3
+      ]
+    },
+    2 => {
+      [
+        %{id: 0, children: [0, 1]},       # Level 2 community contains level 1 communities 0 and 1
+        %{id: 1, children: [2]}           # Level 2 community contains level 1 community 2
+      ],
+      [
+        {0, 1, 0.2}     # Bridge between level 2 communities
+      ]
+    }
   }
-}
+}}
 ```
 
 ### Structure Details
 
-- **Level Keys**: Integer keys represent hierarchical levels (1, 2, 3, ...)
-- **Communities**: List of community assignments with:
-  - `id`: Community identifier within the level
-  - `children`: List of node indices (level 1) or community IDs (higher levels)
-- **Bridges**: List of inter-community connections as `{community_a, community_b, weight}` tuples
+- **Source**: The `%ExLeiden.Source{}` struct containing:
+  - `adjacency_matrix`: The Nx tensor adjacency matrix used for the algorithm
+  - Other metadata about the input graph
+- **Result Map**:
+  - **Level Keys**: Integer keys represent hierarchical levels (1, 2, 3, ...)
+  - **Communities**: List of community assignments with:
+    - `id`: Community identifier within the level
+    - `children`: List of node indices (level 1) or community IDs (higher levels)
+  - **Bridges**: List of inter-community connections as `{community_a, community_b, weight}` tuples
 
 ## Error Handling
 
