@@ -51,7 +51,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -96,7 +97,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
       expected_aggregate = Nx.tensor([[0]])
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -141,7 +143,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -185,7 +188,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -239,7 +243,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -282,7 +287,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 
@@ -329,7 +335,8 @@ defmodule ExLeiden.Leiden.AggregateTest do
 
       expected_source = build_expected_source(expected_aggregate)
 
-      expect(ExLeiden.SourceMock, :build!, fn ^expected_aggregate ->
+      expect(ExLeiden.SourceMock, :build!, fn actual_aggregate ->
+        assert Nx.equal(actual_aggregate, expected_aggregate) |> Nx.all() |> Nx.to_number() == 1
         expected_source
       end)
 

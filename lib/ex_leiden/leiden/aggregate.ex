@@ -71,6 +71,10 @@ defmodule ExLeiden.Leiden.Aggregate do
     diagonal_mask = Nx.eye(n_communities)
 
     # Set diagonal to 0: keep only inter-community edges
-    Nx.select(diagonal_mask, 0, aggregate_matrix)
+    no_diagonal = Nx.select(diagonal_mask, 0, aggregate_matrix)
+
+    # Ensure symmetry by averaging with transpose
+    # This handles floating point precision issues from matrix multiplication
+    (no_diagonal + Nx.transpose(no_diagonal)) / 2
   end
 end
